@@ -1,6 +1,6 @@
 # A/B 테스트 설계 기초 (2): 지표 설계
 
-[← 이전 글](02-hypothesis.md) · [목차](README.md) · [다음 글 →](04-experimentation-platform.md)
+[← 이전 글](02-hypothesis.md) · [목차](README.md) · [다음 글 →](04-experimental-unit.md)
 
 ---
 
