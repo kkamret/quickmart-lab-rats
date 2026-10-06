@@ -3,7 +3,7 @@ import { fail, parseBody } from "@/lib/api";
 import { normalizeClassCode } from "@/lib/class-code";
 import { pickCaseBody } from "@/lib/schemas";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { checkCasePick } from "@/lib/team-case";
+import { savePick } from "@/lib/team-case-server";
 
 // 사례 선택: 수업이 허용한 사례이고, 사례당 조 수 제한 안일 때만 저장. s0_pick 이 열려 있어야 한다.
 export async function POST(req: Request) {
@@ -19,24 +19,17 @@ export async function POST(req: Request) {
     .maybeSingle();
   if (!cls) return fail("수업 코드를 찾을 수 없어요.", 404);
 
-  const { data: team } = await db.from("teams").select("id").eq("id", teamId).eq("class_id", cls.id).maybeSingle();
+  const { data: team } = await db.from("teams").select("id, case_key").eq("id", teamId).eq("class_id", cls.id).maybeSingle();
   if (!team) return fail("이 수업에 속한 조가 아니에요.", 404);
 
   const { data: step } = await db
     .from("step_states").select("status").eq("class_id", cls.id).eq("step", "s0_pick").maybeSingle();
   if (step?.status !== "open") return fail("지금은 사례를 고를 수 없어요. 강사님이 열어주면 선택할 수 있어요.", 409);
 
-  const { data: others } = await db.from("teams").select("case_key").eq("class_id", cls.id).neq("id", teamId);
-  const result = checkCasePick(caseKey, (others ?? []).map((t) => t.case_key), {
-    allowedCases: cls.allowed_cases,
-    maxTeamsPerCase: cls.max_teams_per_case,
+  const result = await savePick(db, {
+    classId: cls.id, teamId, caseKey, prevCase: team.case_key ?? null,
+    allowedCases: cls.allowed_cases, maxTeamsPerCase: cls.max_teams_per_case,
   });
-  if (!result.ok) return fail(result.message, 409);
-
-  const { error } = await db.from("teams").update({ case_key: caseKey }).eq("id", teamId);
-  if (error) {
-    console.error("[api/team/case] 저장 실패", error);
-    return fail("사례를 저장하지 못했어요.", 500);
-  }
+  if (!result.ok) return fail(result.message, result.reason === "error" ? 500 : 409);
   return NextResponse.json({ ok: true, caseKey });
 }
