@@ -9,7 +9,7 @@ function fakeDb(rows: Row[], onRead?: (n: number) => void) {
   let reads = 0;
   return {
     from: () => {
-      let filters: ((r: Row) => boolean)[] = [];
+      const filters: ((r: Row) => boolean)[] = [];
       let patch: Partial<Row> | null = null;
       const b: Record<string, unknown> = {
         select: () => b,
