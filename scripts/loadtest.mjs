@@ -2,12 +2,13 @@
 /**
  * 조 N개가 동시에 입장 → 사례 선택 → 설계 제출 → 시뮬레이션(실행·결과)을 하는 수업 한 회차를 흉내 내는 부하 점검 (M9).
  *
- * 사용: node scripts/loadtest.mjs <배포주소> <수업코드> [조 수=10] [시뮬 반복=3] [최대조수/사례=2]
+ * 사용: node scripts/loadtest.mjs <배포주소> <수업코드> [조 수=10] [시뮬 반복=3] [최대조수/사례=2] [몰릴 사례]
+ * 마지막 인자(baemin|toss|daangn|netflix)를 주면 모든 조가 그 사례부터 동시에 고르려 해서 정원 경쟁 상태를 점검한다.
  * 준비: 강사가 수업을 만들고 s0_pick, s2_design, s3_run, s4_readout 스텝을 모두 "열기" 해 둔다.
  * 주의: 실제 DB 에 조·제출·시뮬 기록이 남는다(이름 "부하N조"). 테스트용 수업에서만 돌리고, 끝나면 수업을 지운다.
  * 이 스크립트는 강사 비밀번호나 키를 쓰지 않는다(조 화면이 쓰는 공개 API 만 호출).
  */
-const [base, code, nTeams = "10", sims = "3", maxPer = "2"] = process.argv.slice(2);
+const [base, code, nTeams = "10", sims = "3", maxPer = "2", hotCase = ""] = process.argv.slice(2);
 if (!base || !code) {
   console.error("사용: node scripts/loadtest.mjs <배포주소> <수업코드> [조 수=10] [시뮬 반복=3] [최대조수/사례=2]");
   process.exit(1);
@@ -72,7 +73,7 @@ async function team(i) {
   // 사례 선택: 선호 사례부터 차례로 시도 (정원이 차면 다음 사례)
   let picked = null;
   for (let k = 0; k < CASES.length && !picked; k++) {
-    const c = CASES[(i + k) % CASES.length];
+    const c = hotCase ? CASES[(CASES.indexOf(hotCase) + k) % CASES.length] : CASES[(i + k) % CASES.length];
     const r = await call("team/case", "/api/team/case", { code, teamId, caseKey: c });
     if (r.status === 200) picked = c;
   }
@@ -89,7 +90,7 @@ async function team(i) {
 }
 
 const pct = (a, p) => a.slice().sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor((p / 100) * a.length))];
-console.log(`대상 ${base} · 수업 ${code} · 조 ${N}개 동시 · 시뮬 ${REPEAT}회 반복 · 사례당 최대 ${MAX_PER}조\n`);
+console.log(`대상 ${base} · 수업 ${code} · 조 ${N}개 동시 · 시뮬 ${REPEAT}회 반복 · 사례당 최대 ${MAX_PER}조${hotCase ? ` · 전원 ${hotCase} 먼저 시도` : ""}\n`);
 const t0 = performance.now();
 const results = await Promise.all(Array.from({ length: N }, (_, i) => team(i)));
 const total = (performance.now() - t0) / 1000;
