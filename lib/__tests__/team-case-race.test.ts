@@ -35,6 +35,7 @@ function fakeDb(rows: Row[], onRead?: (n: number) => void) {
   } as unknown as SupabaseClient;
 }
 
+const noWait = async () => {};
 const base = { classId: "c1", allowedCases: ["baemin", "toss"], maxTeamsPerCase: 2 };
 const count = (rows: Row[], c: string) => rows.filter((r) => r.case_key === c).length;
 
@@ -61,7 +62,7 @@ describe("사례 선택 저장 (경쟁 상태)", () => {
     ];
     // c(이전 toss)가 baemin 을 고르는 동안, 첫 번째 읽기 직후 b 가 baemin 을 먼저 저장한 상황
     const db = fakeDb(rows, (n) => { if (n === 1) rows[1].case_key = "baemin"; });
-    const r = await savePick(db, { ...base, teamId: "c", caseKey: "baemin", prevCase: "toss" });
+    const r = await savePick(db, { ...base, teamId: "c", caseKey: "baemin", prevCase: "toss" }, noWait);
     expect(r).toMatchObject({ ok: false, reason: "full" });
     expect(rows[2].case_key).toBe("toss");
     expect(count(rows, "baemin")).toBe(2);
@@ -70,8 +71,17 @@ describe("사례 선택 저장 (경쟁 상태)", () => {
   it("거의 동시에 여러 조가 저장해도 정원을 넘는 일은 없다 (함께 되돌려질 수는 있다)", async () => {
     const rows: Row[] = Array.from({ length: 6 }, (_, i) => ({ id: `t${i}`, class_id: "c1", case_key: null }));
     const dbs = rows.map(() => fakeDb(rows));
-    await Promise.all(rows.map((r, i) => savePick(dbs[i], { ...base, teamId: r.id, caseKey: "baemin", prevCase: null })));
+    await Promise.all(rows.map((r, i) => savePick(dbs[i], { ...base, teamId: r.id, caseKey: "baemin", prevCase: null }, noWait)));
     expect(count(rows, "baemin")).toBeLessThanOrEqual(2);
+  });
+
+  it("함께 되돌려진 조는 다시 시도해서, 자리가 남은 만큼 채워진다", async () => {
+    const rows: Row[] = Array.from({ length: 6 }, (_, i) => ({ id: `t${i}`, class_id: "c1", case_key: null }));
+    const dbs = rows.map(() => fakeDb(rows));
+    // 조마다 쉬는 시간이 달라서 다음 시도에서 겹침이 풀린다
+    const waits = rows.map((_, i) => async () => { for (let k = 0; k <= i * 3; k++) await Promise.resolve(); });
+    await Promise.all(rows.map((r, i) => savePick(dbs[i], { ...base, teamId: r.id, caseKey: "baemin", prevCase: null }, waits[i])));
+    expect(count(rows, "baemin")).toBe(2);
   });
 });
 
