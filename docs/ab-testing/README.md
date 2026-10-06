@@ -7,8 +7,8 @@ A/B 테스트를 공부하며 직접 정리한 글을 모은 연재형 문서입
 1. [왜 A/B 테스트를 하는가](01-why-ab-testing.md)
 2. [A/B 테스트 설계 기초 (1): 문제 정의와 가설 수립](02-hypothesis.md)
 3. [A/B 테스트 설계 기초 (2): 지표 설계](03-metrics.md)
-4. [실험 플랫폼과 데이터 기반 문화](04-experimentation-platform.md)
-5. [A/B 테스트 설계 기초 (3): 실험 단위 결정](05-experimental-unit.md)
+4. [A/B 테스트 설계 기초 (3): 실험 단위 결정](04-experimental-unit.md)
+5. [실험 플랫폼과 데이터 기반 문화](05-experimentation-platform.md)
 
 ## 편집 원칙
 
