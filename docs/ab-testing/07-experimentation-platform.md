@@ -1,6 +1,6 @@
 # 실험 플랫폼과 데이터 기반 문화
 
-[← 이전 글](04-experimental-unit.md) · [목차](README.md)
+[← 이전 글](06-interference-solutions.md) · [목차](README.md)
 
 > **작성 상태:** Notion 원문이 진행 중이며, `3.2 인프라와 도구들`은 아직 작성 예정입니다.
 
