@@ -1106,9 +1106,9 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
 {
   const s = content("Ch3 실행과 분석", "Ch3 · 실행 순서", "A/A로 점검하고, 조금씩 늘리고, 충분히 돌린다",
     "램프업은 위험 관리입니다. 1%에서 버그·크래시를 잡고, 5%에서 가드레일을 확인한 뒤, 50%에서 본 실험을 합니다. "
-    + "Feature Flag가 있으면 단계 전환과 롤백이 코드 배포 없이 가능합니다.");
+    + "Feature Flag가 있으면 단계 전환과 롤백이 코드 배포 없이 가능합니다. 위키 09편 1.2: 비율은 정해진 표준이 아니고, 초기 단계에서는 Primary의 유의성보다 오류율·로딩·로깅·Guardrail을 먼저 봅니다.");
   const steps = [
-    ["A/A", "0%", "시스템과 기저 분산 점검"], ["1%", "1%", "버그·크래시 감지"],
+    ["A/A", "0%", "시스템과 기저 분산 점검"], ["1%", "1%", "버그·크래시, 노출·로깅 기록 확인"],
     ["5%", "5%", "가드레일 확인"], ["50%", "50%", "본 실험 · 최소 1~2주"],
   ];
   const sw = 2.6, sg = 0.5;
@@ -1123,21 +1123,33 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
     R("\"1%에서 결제 에러율이 0.3%p 올라 램프업을 멈추고 수정 후 재시작합니다\"")], { x: L, y: 4.7, w: CW, h: 0.5, fontSize: 15 });
   T(s, "각 단계로 넘어가는 기준(에러율, 가드레일)을 실험 전에 정해 둡니다",
     { x: L, y: 5.3, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
+  T(s, [R("램프업은 위험을 제한하는 절차  ", { bold: true, color: C.accent4 }),
+    R("효과를 빨리 찾는 절차가 아닙니다. 1%에서 좋아 보인다고 바로 늘리면 Peeking과 같은 문제가 생깁니다")],
+  { x: L, y: 5.8, w: CW, h: 0.5, fontSize: 15 });
 }
 {
   const s = content("Ch3 실행과 분석", "Ch3 · A/A 테스트", "같은 것끼리 비교해서 시스템을 먼저 검증한다",
     "A와 B에 똑같은 경험을 보여주는 테스트입니다. 차이가 없어야 정상이지만, α 5%이면 100번 중 약 5번은 우연히 유의하게 나옵니다. "
-    + "그보다 훨씬 자주 유의하면 배정이나 분산 계산에 문제가 있다는 신호입니다. A/A에서 구한 분산은 표본 크기 계산에도 씁니다.");
+    + "그보다 훨씬 자주 유의하면 배정이나 분산 계산에 문제가 있다는 신호입니다. A/A에서 구한 분산은 표본 크기 계산에도 씁니다. 위키 09편 1.1: A/A의 핵심은 차이가 없어야 한다가 아니라, 차이가 없는 상황에서 시스템이 차이를 만들어내지 않는지 확인하는 것입니다.");
   T(s, "100번 중 약 5번", { x: L, y: 2.1, w: 6.4, h: 1.2, fontSize: 54, bold: true, color: C.accent1 });
   T(s, "A/A 테스트에서 '유의'가 나오는 정상 빈도 (α = 5%)\n이보다 훨씬 많으면 실험 시스템을 의심합니다",
     { x: L, y: 3.35, w: 6.2, h: 0.9, fontSize: 15, color: C.text2 });
   T(s, [
-    BR("A/A로 확인하는 것", { bold: true, fontSize: 20, paraSpaceAfter: 10 }),
-    BR("배정 비율이 설계대로인가 (SRM)", { bullet: true }),
-    BR("p-value가 0~1에 고르게 퍼지는가", { bullet: true }),
-    BR("로그가 두 그룹에서 똑같이 쌓이는가", { bullet: true }),
-    R("지표의 기저 분산 → 표본 크기 계산에 사용", { bullet: true }),
-  ], { x: 7.5, y: 2.1, w: 5.1, h: 3.2, fontSize: 15, paraSpaceAfter: 8 });
+    BR("한 번 유의했다고 고장은 아니다. 이런 패턴을 본다", { bold: true, fontSize: 15, paraSpaceAfter: 4 }),
+    BR("반복했을 때 유의가 지나치게 자주 나온다", { bullet: true }),
+    BR("특정 지표가 계속 한쪽 방향으로 차이 난다", { bullet: true }),
+    BR("특정 브라우저·국가·기기에서만 차이 난다", { bullet: true }),
+    R("계산한 표준오차보다 실제 변동이 훨씬 크다", { bullet: true }),
+  ], { x: L, y: 4.45, w: 6.2, h: 2.0, fontSize: 15, paraSpaceAfter: 2 });
+  T(s, [
+    BR("파이프라인 전체를 그대로 통과시킨다", { bold: true, fontSize: 20, paraSpaceAfter: 4 }),
+    BR("배정 → 노출 → 로깅 → 지표 계산 → 분석", { fontSize: 15, color: C.accent1, bold: true, paraSpaceAfter: 10 }),
+    R("배정  ", { bold: true }), BR("특정 국가·브라우저가 한쪽에 몰림", { paraSpaceAfter: 4 }),
+    R("노출  ", { bold: true }), BR("배정됐지만 한쪽만 기능에 노출되지 않음", { paraSpaceAfter: 4 }),
+    R("로깅  ", { bold: true }), BR("한 Variant의 이벤트가 누락·중복", { paraSpaceAfter: 4 }),
+    R("지표 계산  ", { bold: true }), BR("그룹마다 집계 기준·필터가 다름", { paraSpaceAfter: 4 }),
+    R("분산·SE  ", { bold: true }), R("반복 관측을 독립으로 봐서 불확실성을 작게 계산"),
+  ], { x: 7.5, y: 2.1, w: 5.15, h: 4.2, fontSize: 15 });
 }
 {
   const s = content("Ch3 실행과 분석", "Ch3 · 실험 기간", "최소 1~2주, 요일과 신기효과를 넘겨서",
@@ -1154,8 +1166,8 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
     BR("1~3일 효과는 신기효과가 섞여 있습니다", { fontSize: 15, color: C.text2, paraSpaceAfter: 16 }),
     BR("요일마다 사용자가 다르다", { bold: true, fontSize: 20 }),
     BR("6~7일, 13~14일 주말 사용자는 주중과 다릅니다. 완전한 주 단위로 돌립니다", { fontSize: 15, color: C.text2, paraSpaceAfter: 16 }),
-    BR("기간은 미리 정한다", { bold: true, fontSize: 20 }),
-    R("표본 크기 계산 결과로 종료일을 정하고 그 전에 멈추지 않습니다", { fontSize: 15, color: C.text2 }),
+    BR("'무조건 2주' 규칙은 없다", { bold: true, fontSize: 20 }),
+    R("필요한 표본을 채웠나, 주요 행동 주기를 포함했나, 초기 시간 효과가 결과를 지배하지 않나로 판단합니다", { fontSize: 15, color: C.text2 }),
   ], { x: 8.8, y: 2.0, w: 3.8, h: 4.3 });
 }
 {
@@ -1244,7 +1256,9 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
       R(note, { fontSize: 14, color: C.text2 })], { x: 9.9, y: y - 0.22, w: 2.8, h: 0.75 });
   });
   T(s, [R("실무에서 이렇게 말한다  ", { bold: true, color: C.accent1 }),
-    R("\"결제 전환율이 0.8%p 올랐고, 95% 신뢰구간은 +0.1%p에서 +1.5%p입니다\"")], { x: L, y: 5.85, w: CW, h: 0.5, fontSize: 15 });
+    R("\"결제 전환율이 0.8%p 올랐고, 95% 신뢰구간은 +0.1%p에서 +1.5%p입니다\"")], { x: L, y: 5.75, w: CW, h: 0.5, fontSize: 15 });
+  T(s, "엄밀히는 '같은 절차를 반복하면 만든 구간의 95%가 참값을 포함한다'는 뜻입니다. '이 구간에 참값이 있을 확률이 95%'는 정확한 해석이 아닙니다",
+    { x: L, y: 6.25, w: CW, h: 0.5, fontSize: 14, color: C.text2 });
 }
 {
   const s = content("Ch3 실행과 분석", "Ch3 · 효과 크기", "통계적으로 유의하다 ≠ 의미 있다",
@@ -1260,14 +1274,21 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
     R("기준 전환율 10%, 그룹당 500만 명이면 이 정도 차이도 p < 0.05가 됩니다. 유의함은 '크다'는 뜻이 아닙니다.",
       { fontSize: 15, color: C.text2 }),
   ], { x: 9.2, y: 2.0, w: 3.4, h: 2.6 });
+  const order = ["효과 크기", "신뢰구간", "p-value", "비용·리스크를 포함한 의사결정"];
+  T(s, "결과는 이 순서로 읽는다", { x: L, y: 5.45, w: 6, h: 0.35, fontSize: 14, bold: true, color: C.accent6 });
+  order.forEach((t, i) => {
+    const x = L + i * 2.6;
+    T(s, t, { x, y: 5.85, w: i === 3 ? 4.5 : 2.1, h: 0.5, fontSize: 20, bold: true, color: i === 0 ? C.accent1 : C.text1 });
+    if (i < order.length - 1) arrow(s, x + 2.05, 6.07, 0.45);
+  });
 }
 {
   const s = content("Ch3 실행과 분석", "Ch3 · 분산 축소", "분산을 줄이면 같은 사용자 수로 더 작은 효과를 잡는다",
     "CUPED는 실험 전 같은 사용자의 지표(예: 지난 4주 주문 수)로 실험 중 지표의 설명 가능한 변동을 빼는 방법입니다. Microsoft가 제안했습니다. "
     + "Deng et al.(2013)은 Bing 실험에서 분산을 약 50% 줄여, 같은 검정력을 절반의 사용자나 기간으로 얻을 수 있었다고 보고했습니다.");
   T(s, "Y_cuped = Y - θ · (X_pre - 평균 X_pre)", { x: L, y: 2.0, w: CW, h: 0.6, fontSize: 20, bold: true, color: C.accent1 });
-  T(s, "실험 전 같은 사용자의 지표(X_pre)로 설명되는 변동을 빼고 비교합니다",
-    { x: L, y: 2.65, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
+  T(s, [R("θ = Cov(Y, X) / Var(X)", { bold: true }), R("      분산은 약 Var(Y)(1 - ρ²)로 준다. 실험 전후 지표 상관 ρ = 0.7이면 원래 분산의 51%", { color: C.text2 })],
+    { x: L, y: 2.65, w: CW, h: 0.4, fontSize: 15 });
   // 신뢰구간 폭 비교 (분산 절반 → 폭 약 0.71배)
   const base = 5.0;
   T(s, "보정 전", { x: L, y: 3.55, w: 1.4, h: 0.4, fontSize: 15, bold: true });
@@ -1286,6 +1307,26 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
   SRC(s, "출처: Deng, Xu, Kohavi, Walker (2013), \"Improving the Sensitivity of Online Controlled Experiments by Utilizing Pre-Experiment Data\", WSDM");
 }
 {
+  const s = content("Ch3 실행과 분석", "Ch3 · CUPED 주의점", "CUPED는 좋은 실험의 노이즈를 줄일 뿐, 나쁜 실험을 고치지 못한다",
+    "위키 09편 1.5. CUPED는 효과의 중심값을 키우지 않고 신뢰구간만 좁힙니다(예: +1.0%p [-0.4, +2.4] → 약 +1.0%p [+0.2, +1.8], 교육용 예시). "
+    + "공변량은 반드시 실험 전에 측정한 값이어야 하고, 실험 후 행동을 쓰면 처치가 그 값 자체를 바꿨을 수 있어 인과효과가 왜곡됩니다.");
+  const items = [
+    ["실험 전후 지표의 상관이 낮으면 효과가 작다", "과거·현재 구매액처럼 반복성이 높은 지표에 유리하다"],
+    ["처치의 영향을 받지 않은 변수만 쓴다", "실험 후에 정해진 값을 넣으면 편향이 생긴다"],
+    ["신규 사용자는 실험 전 데이터가 없다", "신규 비중이 높으면 결측 처리나 별도 설계가 필요하다"],
+    ["잘못된 설계를 고쳐주지 않는다", "배정·로깅·SRM 문제가 있는 실험에 써도 결과를 믿을 수 없다"],
+  ];
+  items.forEach(([h, d], i) => {
+    const x = L + (i % 2) * 6.1, y = 1.95 + Math.floor(i / 2) * 1.35;
+    T(s, String(i + 1).padStart(2, "0"), { x, y, w: 0.9, h: 0.6, fontSize: 30, bold: true, color: C.accent4 });
+    T(s, [BR(h, { bold: true, fontSize: 20 }), R(d, { fontSize: 15, color: C.text2 })], { x: x + 1.0, y: y + 0.05, w: 4.9, h: 1.2 });
+  });
+  T(s, [R("CUPED가 하는 일  ", { bold: true, color: C.accent1 }),
+    R("효과를 키우는 게 아니라 신뢰구간을 좁힌다 → 더 작은 효과를 잡고, 같은 검정력을 더 적은 표본·짧은 기간으로 얻는다")],
+  { x: L, y: 4.85, w: CW, h: 0.8, fontSize: 15 });
+  SRC(s, "위키 09편 1.5 · 출처: Deng et al. (2013), WSDM", 6.45);
+}
+{
   const s = content("Ch3 실행과 분석", "Ch3 · 다중검정 문제", "지표 20개를 보면 하나쯤은 우연히 걸린다",
     "효과가 전혀 없어도 지표를 m개 독립적으로 보면 하나 이상 '유의'가 나올 확률은 1 - 0.95^m입니다. 20개면 64%입니다. "
     + "가장 좋은 처방은 Primary 지표를 실험 전에 하나로 정하는 것이고, 여러 개를 봐야 하면 Bonferroni나 Benjamini-Hochberg로 보정합니다.");
@@ -1300,8 +1341,8 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
     BR("64%", { bold: true, fontSize: 54, color: C.accent4 }),
     BR("지표 20개, α 5%일 때", { fontSize: 15, color: C.text2, paraSpaceAfter: 16 }),
     BR("1순위 처방", { bold: true, fontSize: 15 }), BR("Primary 지표를 실험 전에 하나로 정한다", { fontSize: 15, color: C.text2, paraSpaceAfter: 10 }),
-    BR("Bonferroni", { bold: true, fontSize: 15 }), BR("α를 지표 수로 나눈다. 단순하지만 보수적", { fontSize: 15, color: C.text2, paraSpaceAfter: 10 }),
-    BR("Benjamini-Hochberg", { bold: true, fontSize: 15 }), R("발견 중 거짓 비율(FDR)을 통제한다", { fontSize: 15, color: C.text2 }),
+    BR("Bonferroni", { bold: true, fontSize: 15 }), BR("α/m. 하나라도 거짓 양성이 날 확률(FWER)을 막는다. 소수의 중요한 가설에", { fontSize: 15, color: C.text2, paraSpaceAfter: 10 }),
+    BR("Benjamini-Hochberg", { bold: true, fontSize: 15 }), R("발견 중 거짓 비율(FDR)을 통제한다. 검정력이 더 높아 많은 지표를 탐색할 때", { fontSize: 15, color: C.text2 }),
   ], { x: 8.0, y: 1.9, w: 4.6, h: 4.5 });
 }
 {
