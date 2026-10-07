@@ -27,7 +27,9 @@ export const tossMeta = {
     "관찰 데이터의 교란", "오프라인 시뮬레이션 vs 온라인 실험", "A/B/n(ABC)", "처치가 분모를 바꾸는 비율 지표", "Delta Method",
     "비열등성 검정", "CUPED", "장기 효과(습관 침식)", "다중검정", "Ramp-up", "이질적 처치 효과(HTE)", "리스크 기반 배포안 선택", "이해관계자 합의",
   ],
-  theory: ["hypothesis", "non_inferiority", "metric_layers", "analysis_unit", "cuped", "multiple_testing", "novelty", "predefine", "ratio_metric", "alpha_power", "mde", "ramp_up", "north_star", "driver", "ethics"] as TheoryKey[],
+  theory: ["hypothesis", "non_inferiority", "metric_layers", "analysis_unit", "cuped", "multiple_testing", "novelty", "predefine", "ratio_metric", "alpha_power", "mde", "ramp_up", "north_star", "driver", "ethics", "ab_n", "tail_metric"] as TheoryKey[],
+  /** 덱·위키에 설명이 없는 개념 이름. 정답 공개 뒤에만 이름으로 보여 준다. */
+  outsideTheory: ["이질적 처치 효과(HTE)", "오프라인 리플레이", "습관 침식", "이해관계자 사전 합의"] as string[],
 };
 
 export const tossClient: ClientCase = {
