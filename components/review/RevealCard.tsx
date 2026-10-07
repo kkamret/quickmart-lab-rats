@@ -49,7 +49,7 @@ export function RevealCard({ code, teamId, step, theory }: { code: string; teamI
       ))}
       {theory.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-sm font-semibold">오늘 쓴 개념 ↔ 이론 슬라이드</h3>
+          <h3 className="text-sm font-semibold">오늘 쓴 개념 ↔ 이론 챕터</h3>
           <ul className="mt-1 space-y-0.5 text-sm text-ink2">
             {theory.map((k) => <li key={k}>{theoryLabel(k)}</li>)}
           </ul>

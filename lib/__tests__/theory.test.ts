@@ -1,24 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_THEORY, NEUTRAL_BADGE_TITLE, STEP_THEORY, THEORY, TITLED_STEPS, theoryBadge, theorySlideOnly, theoryLabel, wikiHref, type TheoryKey } from "../theory";
+import { FIELD_THEORY, NEUTRAL_BADGE_TITLE, STEP_THEORY, THEORY, TITLED_STEPS, theoryBadge, theoryChapterOnly, theoryLabel, wikiHref, type TheoryKey } from "../theory";
 import { STEP_KEYS } from "../steps";
 import { getClientCase } from "../cases/client-registry";
 import { CASE_KEYS } from "../cases";
 
 describe("이론 개념 표", () => {
-  it("모든 항목에 챕터(2~4)와 슬라이드 표기가 있다", () => {
+  it("모든 항목에 챕터(2~4)와 이름이 있다", () => {
     for (const [k, e] of Object.entries(THEORY)) {
       expect([2, 3, 4], k).toContain(e.chapter);
-      expect(e.slides, k).toMatch(/^\d+(~\d+)?$/);
       expect(e.title.length, k).toBeGreaterThan(0);
     }
   });
-  it("배지는 챕터·슬라이드만 보여 주고 개념 이름은 담지 않는다", () => {
-    expect(theoryBadge("peeking")).toBe("Ch3·48");
-    expect(theoryBadge("metric_layers")).toBe("Ch2·22~26");
+  it("배지는 챕터만 보여 주고 개념 이름은 담지 않는다", () => {
+    expect(theoryBadge("peeking")).toBe("Ch3");
+    expect(theoryBadge("metric_layers")).toBe("Ch2");
   });
-  it("라벨은 이름과 덱 슬라이드를 함께 보여 준다", () => {
-    expect(theoryLabel("hypothesis")).toBe("Ch2 · 가설 문장 구조 (덱 17장)");
-    expect(theoryLabel("metric_layers")).toBe("Ch2 · 지표 층 (덱 22~26장)");
+  it("라벨은 챕터와 개념 이름을 함께 보여 준다", () => {
+    expect(theoryLabel("hypothesis")).toBe("Ch2 · 가설 문장 구조");
+    expect(theoryLabel("metric_layers")).toBe("Ch2 · 지표 층");
   });
   it("위키가 있는 개념만 링크를 준다", () => {
     expect(wikiHref("hypothesis")).toMatch(/docs\/ab-testing\/02-hypothesis\.md$/);
@@ -54,9 +53,9 @@ describe("이론 연결 매핑", () => {
 });
 
 describe("정답 공개 전 함정 이름 숨김", () => {
-  it("theorySlideOnly 는 챕터·슬라이드만 보여 준다", () => {
-    expect(theorySlideOnly("analysis_unit")).toBe("Ch3 · 덱 42장");
-    expect(theorySlideOnly("analysis_unit")).not.toContain(THEORY.analysis_unit.title);
+  it("theoryChapterOnly 는 챕터만 보여 준다", () => {
+    expect(theoryChapterOnly("analysis_unit")).toBe("Ch3");
+    expect(theoryChapterOnly("analysis_unit")).not.toContain(THEORY.analysis_unit.title);
   });
   it("FIELD_THEORY 의 중립 툴팁·배지에 개념 이름이 없다", () => {
     for (const k of new Set(Object.values(FIELD_THEORY))) {
@@ -64,10 +63,10 @@ describe("정답 공개 전 함정 이름 숨김", () => {
       expect(theoryBadge(k), k).not.toContain(THEORY[k].title);
     }
   });
-  it("TITLED_STEPS 밖의 스텝은 theorySlideOnly 로 이름 없이 표시된다", () => {
+  it("TITLED_STEPS 밖의 스텝은 theoryChapterOnly 로 이름 없이 표시된다", () => {
     for (const [s, ks] of Object.entries(STEP_THEORY)) {
       if (TITLED_STEPS.has(s)) continue;
-      for (const k of ks!) expect(theorySlideOnly(k), `${s}:${k}`).not.toContain(THEORY[k].title);
+      for (const k of ks!) expect(theoryChapterOnly(k), `${s}:${k}`).not.toContain(THEORY[k].title);
     }
   });
 });
