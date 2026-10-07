@@ -88,6 +88,82 @@ function content(sec, kicker, title, notes) {
   if (notes) s.addNotes(notes);
   return s;
 }
+
+function collectWikiReferences() {
+  const docsDir = path.join(__dirname, "..", "..", "ab-testing");
+  const files = fs.readdirSync(docsDir).filter((name) => /^\d{2}-.*\.md$/.test(name)).sort();
+  const seen = new Set();
+  const references = [];
+
+  for (const file of files) {
+    const markdown = fs.readFileSync(path.join(docsDir, file), "utf8");
+    const heading = markdown.indexOf("## Reference");
+    if (heading < 0) continue;
+    const tail = markdown.slice(heading);
+    const nextHeading = tail.indexOf("\n## ", "## Reference".length);
+    const sectionText = nextHeading < 0 ? tail : tail.slice(0, nextHeading);
+    const links = sectionText.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g);
+
+    for (const [, rawTitle, rawUrl] of links) {
+      const url = rawUrl.replace(/\?utm_source=chatgpt\.com$/, "");
+      if (seen.has(url)) continue;
+      seen.add(url);
+      references.push({
+        title: rawTitle.replaceAll("\\|", "|").trim(),
+        url,
+        source: file.slice(0, 2),
+      });
+    }
+  }
+
+  return references;
+}
+
+function addReferenceSlides() {
+  const references = collectWikiReferences();
+  const labels = [
+    "Oracle: A/B Testing", "Datarian: Experiment Bible", "OCE Case Studies",
+    "Hypothesis Testing", "WikiDocs: A/B Guide", "Growth Culture",
+    "Problem Definition", "Null vs Alternative", "One vs Two Tailed",
+    "OEC / KPI / Driver", "Metric Selection", "Ably: Product Metrics",
+    "OEC Design", "A/B Data Quality", "Hackle: User ID",
+    "Conversion Unit", "Randomization Unit", "Sample Proportion",
+    "MDE Guide", "GA: Cookie + Dimension", "Wanted: A/B Basics",
+    "Hash Assignment", "Experiment Guide", "SUTVA & Interference",
+    "OCE: Leakage", "Causal Workshop 2022", "Facebook: Contagion",
+    "Contagion: Editorial Note", "61M Social Influence", "TOCE: A/A Test",
+    "TOCE: Ramp-up", "Unexpected OCE Results", "CUPED",
+    "ASA: p-values", "Benjamini-Hochberg FDR", "OCE: A/A Materials",
+    "SRM Diagnosis Guide", "SRM Diagnosis Paper", "Always Valid Inference",
+    "Oracle: A/B Pitfalls", "Experiment Platform", "Platform & Culture",
+  ];
+
+  const columns = 4;
+  const rows = Math.ceil(references.length / columns);
+  const s = content(
+    "Ch5 사례와 결정",
+    `참고자료 · ${references.length}개 고유 링크`,
+    "Reference",
+    "docs/ab-testing 01~11편의 Reference 링크를 URL 기준으로 중복 제거했습니다.",
+  );
+
+  references.forEach((reference, index) => {
+    const col = Math.floor(index / rows);
+    const row = index % rows;
+    const x = L + col * 3.02;
+    const y = 1.78 + row * 0.43;
+    T(s, labels[index] || reference.title.slice(0, 28), {
+      x, y, w: 2.82, h: 0.3,
+      fontSize: 8.5,
+      bold: true,
+      color: C.accent1,
+      hyperlink: { url: reference.url },
+      fit: "shrink",
+    });
+  });
+
+  console.log(`references: ${references.length} unique URLs`);
+}
 function section(sec, num, title, desc, notes) {
   pres.addSection({ title: sec });
   const s = pres.addSlide({ masterName: "SECTION", sectionTitle: sec });
@@ -143,7 +219,7 @@ pres.addSection({ title: "오프닝" });
 {
   const s = pres.addSlide({ masterName: "COVER", sectionTitle: "오프닝" });
   s.addText("A/B 테스트\n설계 및 실습", { placeholder: "title" });
-  s.addText("이론 파트 · DA 트랙 · 75분\n개선 아이디어를 검증 가능한 실험으로, 결과를 배포 결정으로",
+  s.addText("이론 파트 · DA 트랙\n개선 아이디어를 검증 가능한 실험으로, 결과를 배포 결정으로",
     { placeholder: "sub" });
   // 모티프: 무작위로 두 그룹에 배정된 사용자 점
   const x0 = 8.9, y0 = 1.4, gap = 0.36;
@@ -171,31 +247,26 @@ pres.addSection({ title: "오프닝" });
       R(b, { fontSize: 15, color: C.text2 })], { x: sx + i * (sw + 0.35), y: sy, w: sw, h: 1.0 });
     if (!last) arrow(s, sx + i * (sw + 0.35) + sw - 0.55, sy + 0.25, 0.6);
   });
-  T(s, "DA 트랙의 흐름을 이 세션이 하나의 의사결정으로 닫습니다",
-    { x: L, y: 5.75, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
 }
 {
-  const s = content("오프닝", "오프닝", "75분 동안 다룰 다섯 장",
-    "타임박싱이 중요합니다. Ch2와 Ch3가 각각 20분으로 가장 깁니다. "
-    + "Ch4의 함정은 개념만 소개하고, 직접 겪어보는 것은 뒤의 함정·해석·공유 세션에서 합니다.");
+  const s = content("오프닝", "오프닝", "오늘 다룰 다섯 장",
+    "Ch4의 함정은 개념만 소개하고, 직접 겪어보는 것은 뒤의 함정·해석·공유 세션에서 합니다.");
   const ch = [
-    ["Ch1", "실험과 인과추론", 12], ["Ch2", "설계의 핵심 구성요소", 20], ["Ch3", "실행과 통계 분석", 20],
-    ["Ch4", "실무 함정과 고급 설계", 15], ["Ch5", "사례·문화·의사결정", 8],
+    ["Ch1", "실험과 인과추론"], ["Ch2", "설계의 핵심 구성요소"], ["Ch3", "실행과 통계 분석"],
+    ["Ch4", "실무 함정과 고급 설계"], ["Ch5", "사례·문화·의사결정"],
   ];
-  const total = 75, gap = 0.12, usable = CW - gap * (ch.length - 1);
+  const gap = 0.12, w = (CW - gap * (ch.length - 1)) / ch.length;
   let x = L;
   const colors = [HEX.blue, HEX.blue, HEX.blue, HEX.blue, HEX.blue];
-  ch.forEach(([n, t, m], i) => {
-    const w = (usable * m) / total;
+  ch.forEach(([n, t], i) => {
     T(s, [BR(n, { bold: true, color: C.accent1, fontSize: 14 }), R(t, { fontSize: 15, bold: true })],
-      { x, y: 2.3, w: Math.max(w, 1.5), h: 0.9 });
+      { x, y: 2.3, w, h: 0.9 });
     s.addShape(pres.ShapeType.line, { x, y: 3.45, w, h: 0, line: { color: colors[i], width: 6 } });
-    T(s, `${m}분`, { x, y: 3.65, w, h: 0.4, fontSize: 14, color: C.text2 });
     x += w + gap;
   });
   T(s, [
     BR("통계는 도구, 무게중심은 설계와 해석", { bold: true, fontSize: 20 }),
-    R("수식 유도 대신 \"그래서 배포할까?\"로 번역하는 연습을 합니다. 이어서 실습 75분, 함정·해석·공유 30분이 진행됩니다.",
+    R("수식 유도보다 \"그래서 배포할까?\"로 번역하기 · 이론 뒤에 실습, 함정·해석·공유",
       { fontSize: 15, color: C.text2 }),
   ], { x: L, y: 4.7, w: 10.5, h: 1.4 });
 }
@@ -203,7 +274,7 @@ pres.addSection({ title: "오프닝" });
 // ======================================================
 // Ch1
 // ======================================================
-section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과추론", "약 12분 · 왜 '배포하고 보기'로는 부족한가");
+section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과추론", "왜 '배포하고 보기'로는 부족한가");
 {
   const s = content("Ch1 실험과 인과추론", "Ch1 · 오프닝 질문", "그냥 배포하고 보면 안 되나?",
     "청중에게 먼저 물어봅니다. '전환율이 올랐으니 성공 아닌가요?' "
@@ -219,7 +290,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
     BR("광고 채널 변경으로 달라진 유입 구성", { bullet: true }),
     R("원래 있던 일별 변동", { bullet: true }),
   ], { x: 7.4, y: 2.15, w: 5.2, h: 2.6, fontSize: 15, paraSpaceAfter: 8 });
-  T(s, [R("전후 비교는 "), R("무엇 때문에", { bold: true, color: C.accent4 }), R(" 올랐는지 분리하지 못합니다")],
+  T(s, [R("전후 비교로는 "), R("무엇 때문에", { bold: true, color: C.accent4 }), R(" 올랐는지 가를 수 없다")],
     { x: 7.4, y: 5.0, w: 5.2, h: 0.8, fontSize: 20 });
 }
 {
@@ -265,11 +336,11 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
   ], { x: L, y: 2.0, w: 7.4, colW: [1.4, 2.2, 2.3, 1.5], rowH: 0.5 });
   T(s, [
     BR("관측하지 못한 칸이 반드시 생긴다", { bold: true, fontSize: 20 }),
-    R("인과추론의 근본 문제(Fundamental Problem of Causal Inference)입니다. 대신 집단의 평균 차이를 봅니다.",
+    R("인과추론의 근본 문제 (Fundamental Problem of Causal Inference) → 개인 대신 집단 평균을 비교",
       { fontSize: 15, color: C.text2 }),
   ], { x: 8.6, y: 2.0, w: 4.0, h: 2.0 });
   T(s, "ATE = E[Y(1)] - E[Y(0)]", { x: 8.6, y: 4.2, w: 4.0, h: 0.6, fontSize: 20, bold: true, color: C.accent1 });
-  T(s, "랜덤 배정을 하면 두 그룹의 평균 차이가 이 값을 편향 없이 추정합니다",
+  T(s, "랜덤 배정 → 두 그룹 평균 차이가 ATE의 편향 없는 추정치",
     { x: 8.6, y: 4.9, w: 4.0, h: 0.9, fontSize: 15, color: C.text2 });
 }
 {
@@ -306,7 +377,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
   ], { x: 10.1, y: 2.2, w: 2.6, h: 3.6 });
 }
 {
-  const s = content("Ch1 실험과 인과추론", "Ch1 · Bing 사례", "아이디어의 가치는 미리 알기 어렵다",
+  const s = content("Ch1 실험과 인과추론", "Ch1 · Bing 사례", "6개월 미뤄 둔 아이디어가 매출을 12% 올렸다",
     "위키 01편 1장. 2012년 Bing 직원이 광고 제목 아래 문장을 제목에 합쳐 길게 보여주자고 제안했지만 우선순위가 낮아 6개월 넘게 미뤄졌습니다. "
     + "A/B 테스트 결과 매출이 약 12% 늘었고, 사용자 경험(사용자당 세션 수, 이용량, 관련성)은 나빠지지 않았습니다. "
     + "위키 11편: Microsoft에서 실험한 아이디어 중 지표를 개선한 것은 약 3분의 1뿐이었습니다. 출처: Kohavi & Thomke, HBR 2017.");
@@ -315,7 +386,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
   const rx = L + imgW + 0.5, rw = 12.65 - rx;
   T(s, [R("+12%", { bold: true, fontSize: 54, color: C.accent1 }), R("  매출", { fontSize: 20, bold: true })],
     { x: rx, y: 1.85, w: rw, h: 1.0 });
-  T(s, "6개월 넘게 미뤄졌던 아이디어. 사용자당 세션 수·이용량·관련성은 나빠지지 않았습니다",
+  T(s, "광고 제목 길게 표시 · 사용자 경험 지표(세션 수, 이용량, 관련성) 악화 없음",
     { x: rx, y: 2.9, w: rw, h: 0.7, fontSize: 15, color: C.text2 });
   const lessons = [
     ["아이디어의 가치는 사전에 판단하기 어렵다", "Microsoft에서 실험한 아이디어 중 지표를 개선한 건 약 3분의 1"],
@@ -342,7 +413,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
     [b("OEC"), "실험 성공을 판단하는 전체 평가 기준", "Ch2에서 자세히"],
     [b("파라미터"), "통제할 수 있는 실험 변수", "요인(factor)이라고도 부른다"],
   ], { x: L, y: 1.95, w: CW, colW: [2.9, 4.2, 4.83], rowH: 0.6, fontSize: 15 });
-  T(s, "A/B 테스트 = 온라인 통제 실험(Online Controlled Experiment). A/B/n, 분할 테스트, 버킷 테스트, 플라이트라고도 부릅니다",
+  T(s, "같은 말: 온라인 통제 실험(Online Controlled Experiment), 분할 테스트, 버킷 테스트, 플라이트",
     { x: L, y: 6.2, w: CW, h: 0.4, fontSize: 14, color: C.text2 });
 }
 {
@@ -366,9 +437,6 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
       BR(h, { bold: true, fontSize: 20 }), BR(d, { fontSize: 14, color: C.text2, paraSpaceAfter: 4 }),
       R(ch, { fontSize: 14, color: C.accent6, bold: true })], { x, y, w: cw - 0.15, h: 1.8 });
   });
-  T(s, [R("50 : 50", { bold: true, fontSize: 30, color: C.accent1 }), BR(""),
-    R("가장 단순한 예일 뿐, 다른 비율로도 배정할 수 있습니다", { fontSize: 14, color: C.text2 })],
-  { x: L + 3 * (cw + gx), y: 4.15, w: cw, h: 1.8 });
 }
 {
   const s = content("Ch1 실험과 인과추론", "Ch1 · 타당성",
@@ -388,7 +456,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
     ["전체 출시·여러 국가 출시·장기 전략에서 중요", "깨뜨리는 것: 특수 시즌, 신규 사용자만, 특정 국가만"], C.accent2);
   // 단계적 확보 흐름
   const flow = ["내적 타당성 확보", "외적 타당성 검토", "다른 집단·국가·기간에서 반복"];
-  T(s, "엄격하게 통제할수록 내적 타당성은 오르지만 현실과는 멀어집니다. 그래서 단계적으로 확보합니다",
+  T(s, "통제를 엄격하게 할수록 내적 타당성 ↑, 현실과의 거리 ↑ → 단계적으로 확보",
     { x: L, y: 4.6, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
   flow.forEach((t, i) => {
     const x = L + i * 4.0;
@@ -421,7 +489,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
 // ======================================================
 // Ch2
 // ======================================================
-section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성요소", "약 20분 · 문제와 가설, 지표, 단위, 표본, 배정");
+section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성요소", "문제와 가설, 지표, 단위, 표본, 배정");
 {
   const s = content("Ch2 설계 구성요소", "Ch2 · 문제 정의", "현상이 아니라 문제에서 시작한다",
     "위키 02편 1.1. '매출이 떨어졌다'는 관찰된 현상일 뿐 어디를 바꿔야 할지 알려주지 않습니다. "
@@ -440,8 +508,9 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   });
   T(s, [
     BR("왜 끝까지 좁히나", { bold: true, fontSize: 20, paraSpaceAfter: 6 }),
-    R("A/B 테스트는 \"무엇을 바꿨을 때 이 지표가 얼마나 달라졌나\"를 비교합니다. 지표와 구간까지 좁혀야 바꿀 곳이 보이고, 엉뚱한 Treatment를 실험하지 않습니다.",
-      { fontSize: 15, color: C.text2 }),
+    BR("A/B는 \"무엇을 바꿨을 때 이 지표가 얼마나 달라졌나\"를 비교", { fontSize: 15, color: C.text2, bullet: true, paraSpaceAfter: 4 }),
+    BR("지표·구간까지 좁혀야 바꿀 곳이 보인다", { fontSize: 15, color: C.text2, bullet: true, paraSpaceAfter: 4 }),
+    R("엉뚱한 Treatment를 실험하지 않게 된다", { fontSize: 15, color: C.text2, bullet: true }),
   ], { x: 9.2, y: 2.0, w: 3.45, h: 3.4 });
   T(s, "*CVR(Conversion Rate): 전환율", { x: L, y: 6.2, w: 6, h: 0.35, fontSize: 14, color: C.accent6 });
 }
@@ -463,9 +532,8 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     BR("실험군에서 한 번에 다 바꾸면", { bold: true, fontSize: 20, paraSpaceAfter: 10 }),
     R("할인율 변경", { color: C.accent4, bold: true }), R("  +  "), R("버튼 색 변경", { color: C.accent4, bold: true }),
     R("  +  "), BR("추천 영역 변경", { color: C.accent4, bold: true, paraSpaceAfter: 10 }),
-    BR("전환율이 올라도 무엇 때문인지 알 수 없습니다", { fontSize: 15, color: C.text2, paraSpaceAfter: 18 }),
-    BR("그래서", { bold: true, fontSize: 15, color: C.accent1 }),
-    R("검증하려는 핵심 변화 하나를 대조군과의 유일한 차이로 둡니다", { fontSize: 20, bold: true }),
+    BR("→ 전환율이 올라도 원인을 모른다", { fontSize: 15, color: C.text2, paraSpaceAfter: 18 }),
+    R("대조군과의 차이는 핵심 변화 하나만", { fontSize: 20, bold: true, color: C.accent1 }),
   ], { x: 6.95, y: 1.95, w: 5.7, h: 4.0, fontSize: 15 });
 }
 {
@@ -484,7 +552,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     T(s, t, { x, y: 3.35, w: 2.8, h: 0.5, fontSize: 20, bold: true, color: i === 1 ? C.accent5 : C.accent1 });
     if (i < chain.length - 1) arrow(s, x + 2.5, 3.6, 0.7);
   });
-  T(s, "바꾼 것과 지표 사이에 이 연결이 설명되어야 합니다", { x: 10.4, y: 3.35, w: 2.3, h: 0.8, fontSize: 14, color: C.text2 });
+  T(s, "이 연결을 설명할 수 있어야 한다", { x: 10.4, y: 3.35, w: 2.3, h: 0.8, fontSize: 14, color: C.text2 });
   T(s, [
     BR("예시 가설", { bold: true, fontSize: 14, color: C.accent3 }),
     slot("재방문 가능성이 높은 사용자", C.accent1), R("에게만 "), slot("프로모션을 노출하면", C.accent2), R(", "),
@@ -511,13 +579,13 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     BR("나쁜 예", { bold: true, fontSize: 14, color: C.accent4 }),
     R("\"장바구니 UI를 개선하면 지표가 좋아질 것이다\"", { fontSize: 20 }),
   ], { x: L, y: 4.15, w: 6.2, h: 1.0 });
-  T(s, "대상도, 이유도, 지표도 없어 어떤 결과가 나와도 '틀렸다'고 말할 수 없습니다",
+  T(s, "대상·이유·지표가 없음 → 어떤 결과로도 '틀렸다'고 할 수 없다",
     { x: 7.2, y: 4.5, w: 5.4, h: 0.8, fontSize: 15, color: C.text2 });
   T(s, [R("가설을 쓴 뒤 스스로 묻기  ", { bold: true, color: C.accent1 }),
     R("\"어떤 결과가 나오면 이 가설을 지지하지 않을 것인가?\"")], { x: L, y: 5.6, w: CW, h: 0.5, fontSize: 20 });
 }
 {
-  const s = content("Ch2 설계 구성요소", "Ch2 · 제품 가설에서 통계적 가설로", "H0와 H1: 우연이라고 보기 어려운가",
+  const s = content("Ch2 설계 구성요소", "Ch2 · 제품 가설에서 통계적 가설로", "제품 가설을 통계적 가설로 바꾼다",
     "위키 02편 1.4~1.5. 제품 가설은 '이 변화를 적용하면 어떤 결과가 나타날까'에 답하고, 통계적 가설은 '관찰된 차이가 우연이라 보기 어려울 만큼 큰가'에 답합니다. "
     + "효과가 없다는 가정부터 하는 이유는, 귀무가설을 임시로 참이라고 두고 그 아래에서 관측 데이터가 얼마나 드문지를 재기 위해서입니다.");
   T(s, [BR("제품 가설", { bold: true, fontSize: 15, color: C.text2 }),
@@ -537,7 +605,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     R("한 방향만 본다. 같은 표본이면 그 방향의 검정력이 더 높다", { fontSize: 14, color: C.text2 }),
   ], { x: 6.95, y: 3.3, w: 5.7, h: 2.0 });
   T(s, [R("왜 '효과 없음'부터 가정하나  ", { bold: true, color: C.accent1 }),
-    R("H0를 임시로 참이라 두고, 그 아래에서 지금 데이터가 얼마나 드문지를 잽니다")], { x: L, y: 5.65, w: CW, h: 0.5, fontSize: 15 });
+    R("H0를 참이라 두고 → 지금 데이터가 얼마나 드문지 잰다")], { x: L, y: 5.65, w: CW, h: 0.5, fontSize: 15 });
 }
 {
   const s = content("Ch2 설계 구성요소", "Ch2 · 단측검정 vs 양측검정", "단측검정은 결과를 보기 전에 정한다",
@@ -601,7 +669,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     T(s, note, { x: 9.7, y: y - 0.15, w: 3.0, h: 0.6, fontSize: 14, color: C.text2 });
   });
   T(s, [R("둘 다 우월성 검정으로는 '차이 없음'  ", { bold: true, color: C.accent1 }),
-    R("하지만 결과 1만 \"나빠지지 않았다\"고 말할 수 있습니다. 마진은 실험 전에 비즈니스와 합의합니다")],
+    R("→ \"나빠지지 않았다\"는 결과 1만 가능 · 마진은 실험 전에 비즈니스와 합의")],
   { x: L, y: 6.1, w: CW, h: 0.6, fontSize: 15 });
 }
 {
@@ -631,7 +699,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   });
 }
 {
-  const s = content("Ch2 설계 구성요소", "Ch2 · OEC", "좋은 OEC: 지금 잴 수 있고, 장기 목표를 가리킨다",
+  const s = content("Ch2 설계 구성요소", "Ch2 · OEC", "좋은 OEC는 지금 잴 수 있고, 장기 목표를 가리킨다",
     "위키 03편 2.1. 단기 지표(CTR, 체류 시간, 페이지뷰)의 개선이 장기 성공과 항상 같은 방향은 아닙니다. 가격을 올리면 단기 수익은 쉽게 오르지만 장기적으로 이탈로 이어질 수 있습니다. "
     + "장기 가치와 연결될 것 같은 단기 지표를 후보로 삼되, '연결될 것 같다'와 '실제로 연결된다'는 다르므로 리서치·상관 분석·실험으로 검증합니다.");
   const cols = [
@@ -647,11 +715,8 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   });
   vline(s, 6.55, 2.0, 3.0);
   T(s, [R("OEC는 하나여야 하나?  ", { bold: true, color: C.accent1 }),
-    R("가능하면 하나를 권장합니다. 검색처럼 품질·사용량·광고 수익의 균형이 필요하면, 여러 지표를 실험 전에 정한 범위와 가중치로 조합합니다")],
-  { x: L, y: 5.3, w: CW, h: 0.8, fontSize: 15 });
-  T(s, [R("← 그로스 세션 노스스타  ", { bold: true, color: C.accent1 }),
-    R("노스스타가 '어느 방향으로 갈까'를 정하면, OEC는 '이번 실험이 그 방향으로 움직였나'를 판단합니다")],
-  { x: L, y: 6.15, w: CW, h: 0.5, fontSize: 15 });
+    R("가능하면 하나. 품질·사용량·광고 수익처럼 균형이 필요하면 실험 전에 정한 가중치로 조합")],
+  { x: L, y: 5.4, w: CW, h: 0.6, fontSize: 15 });
 }
 {
   const s = content("Ch2 설계 구성요소", "Ch2 · OEC와 North Star Metric", "노스스타는 방향을, OEC는 이번 실험을 판단한다",
@@ -772,7 +837,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     R("\"전환율은 올랐지만 로딩 시간이 200ms 늘어서 배포는 보류합니다\"")], { x: L, y: 5.7, w: CW, h: 0.5, fontSize: 15 });
 }
 {
-  const s = content("Ch2 설계 구성요소", "Ch2 · Goodhart's Law", "지표가 목표가 되면 더 이상 좋은 지표가 아니다",
+  const s = content("Ch2 설계 구성요소", "Ch2 · Goodhart's Law", "지표는 목표가 아니라 가치를 대신 재는 숫자다",
     "위키 03편 2.5. 찰스 굿하트(LSE)가 제시한 개념입니다. 지표 자체가 나쁘다는 뜻이 아니라, 우리가 재는 지표는 대부분 진짜 원하는 가치를 대신 재는 proxy라는 점입니다. "
     + "'무조건 CTR을 최대화하자'가 목표가 되면 CTR은 좋아져도 CTR이 대변하던 사용자 가치는 나빠질 수 있습니다.");
   T(s, "\"어떤 지표가 목표가 되면, 그것은 더 이상 좋은 지표가 아니게 된다.\"",
@@ -780,13 +845,13 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   T(s, "Goodhart's Law · 찰스 굿하트", { x: L, y: 2.6, w: 6, h: 0.35, fontSize: 14, color: C.accent6 });
   T(s, [R("CTR ↑", { bold: true, color: C.accent1 })], { x: L, y: 3.4, w: 3.2, h: 1.0, fontSize: 54 });
   T(s, [R("사용자 가치 ↓", { bold: true, color: C.accent4 })], { x: 3.9, y: 3.4, w: 4.8, h: 1.0, fontSize: 54 });
-  T(s, "\"무조건 CTR을 최대화하자\"가 목표가 되면, 측정값은 좋아져도 그 숫자가 대변하던 가치는 나빠질 수 있습니다",
+  T(s, "\"무조건 CTR 최대화\" → 숫자는 오르는데 그 숫자가 대변하던 가치는 떨어질 수 있다",
     { x: L, y: 4.45, w: 8.0, h: 0.8, fontSize: 15, color: C.text2 });
   T(s, [
     BR("지표는 proxy", { bold: true, fontSize: 20, paraSpaceAfter: 4 }),
-    BR("진짜 원하는 가치를 대신 재는 숫자입니다", { fontSize: 15, color: C.text2, paraSpaceAfter: 14 }),
-    BR("통계적 유의성의 한계", { bold: true, fontSize: 20, paraSpaceAfter: 4 }),
-    R("유의하다는 결과가 지표 선택이 옳았다는 것까지 보장하지는 않습니다", { fontSize: 15, color: C.text2 }),
+    BR("진짜 가치를 대신 재는 숫자", { fontSize: 15, color: C.text2, paraSpaceAfter: 14 }),
+    BR("유의성의 한계", { bold: true, fontSize: 20, paraSpaceAfter: 4 }),
+    R("유의하다 ≠ 지표를 잘 골랐다", { fontSize: 15, color: C.text2 }),
   ], { x: 9.2, y: 3.35, w: 3.45, h: 2.8 });
 }
 {
@@ -814,9 +879,9 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     T(s, out, { x: 10.45, y, w: 2.2, h: 0.5, fontSize: 14, bold: true, color });
   });
   T(s, [R("trade-off도 미리  ", { bold: true, color: C.accent1 }),
-    R("구매전환율 +4%, 취소율 +15%라면? \"취소율이 정한 수준 이상 나빠지면 배포하지 않는다\"를 실험 전에 정해 둡니다")],
+    R("구매전환율 +4%, 취소율 +15%라면? → \"취소율이 X 이상 나빠지면 배포 안 함\"을 실험 전에")],
   { x: L, y: 4.95, w: CW, h: 0.8, fontSize: 15 });
-  T(s, "사전에 정하지 않은 지표를 보면 안 된다는 뜻은 아닙니다. 나중에 발견한 패턴은 탐색적 결과로 구분합니다",
+  T(s, "다른 지표를 보지 말라는 게 아니다 · 나중에 찾은 패턴은 탐색적 결과로 구분",
     { x: L, y: 5.85, w: CW, h: 0.4, fontSize: 14, color: C.text2 });
 }
 {
@@ -860,11 +925,11 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   T(s, [R("세션 단위를 고를 때 묻기  ", { bold: true, color: C.accent1 }),
     R("\"이 변화를 본 사용자가 다음 방문에서 행동이 달라질 가능성이 있는가?\"")], { x: L, y: 5.55, w: CW, h: 0.4, fontSize: 15 });
   T(s, [R("원칙  ", { bold: true, color: C.accent1 }),
-    R("User-level에서 시작하고, 다른 단위를 쓸 때는 이유를 설명할 수 있어야 한다. 배정 단위와 분석 단위가 다르면 분산을 보정한다 (Delta Method, Ch3)")],
+    R("User-level에서 시작, 다른 단위는 이유를 댈 수 있을 때만 · 배정 ≠ 분석 단위면 분산 보정 (Ch3)")],
   { x: L, y: 6.0, w: CW, h: 0.7, fontSize: 14 });
 }
 {
-  const s = content("Ch2 설계 구성요소", "Ch2 · 사용자 식별자", "사용자를 무엇으로 알아볼까: 식별자는 사람의 근사치다",
+  const s = content("Ch2 설계 구성요소", "Ch2 · 사용자 식별자", "식별자는 사람의 근사치다",
     "위키 04편 3.2·3.7. 같은 사용자를 실험 내내 같은 그룹에 두는 것을 Sticky Assignment라고 합니다. 서비스가 알아볼 수 있는 건 계정·기기·쿠키 같은 식별자뿐이라, "
     + "쿠키를 지우거나 기기를 바꾸거나 로그인 전후로 식별자가 바뀌면 같은 사람이 두 그룹에 걸칠 수 있습니다. 식별자는 개인에게 연결되므로 보안에도 신경 써야 합니다.");
   const code = (t) => ({ text: t, options: { fontFace: "Courier New", bold: true } });
@@ -883,7 +948,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     R("→ 두 그룹의 경험이 섞여 차이가 작게 측정됩니다", { fontSize: 15, color: C.text2 }),
   ], { x: 7.3, y: 1.95, w: 5.35, h: 3.6, fontSize: 15, paraSpaceAfter: 4 });
   T(s, [R("기억할 것  ", { bold: true, color: C.accent1 }),
-    R("어떤 식별자도 사람을 완벽히 대표하지 못합니다. 실험 전에 무엇으로 배정할지 정하고, 식별자 로그는 개인정보로 다룹니다")],
+    R("식별자는 사람의 근사치 · 배정 기준 식별자는 실험 전에 정하기 · 식별자 로그 = 개인정보")],
   { x: L, y: 5.6, w: CW, h: 0.8, fontSize: 15 });
 }
 {
@@ -936,7 +1001,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   });
   T(s, [R("설계에서 정할 것  ", { bold: true, color: C.accent1 }),
     R("언제 배정할지(트리거 시점), 누구를 분석할지, 대조군에도 트리거 조건을 기록할지")], { x: L, y: 5.3, w: CW, h: 0.5, fontSize: 15 });
-  T(s, "실험 전체 영향은 트리거 효과 × 트리거 비율로 환산해 보고합니다",
+  T(s, "전체 영향 보고 = 트리거 효과 × 트리거 비율",
     { x: L, y: 5.85, w: CW, h: 0.4, fontSize: 14, color: C.text2 });
 }
 {
@@ -1102,7 +1167,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
 // ======================================================
 // Ch3
 // ======================================================
-section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20분 · A/A, 램프업, 기간, 검정, 구간, 분산 축소");
+section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "A/A, 램프업, 기간, 검정, 구간, 분산 축소");
 {
   const s = content("Ch3 실행과 분석", "Ch3 · 실행 순서", "A/A로 점검하고, 조금씩 늘리고, 충분히 돌린다",
     "램프업은 위험 관리입니다. 1%에서 버그·크래시를 잡고, 5%에서 가드레일을 확인한 뒤, 50%에서 본 실험을 합니다. "
@@ -1121,10 +1186,10 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
   // 노출 비율 막대 대신 점 크기로 트래픽 표현
   T(s, [R("실무에서 이렇게 말한다  ", { bold: true, color: C.accent1 }),
     R("\"1%에서 결제 에러율이 0.3%p 올라 램프업을 멈추고 수정 후 재시작합니다\"")], { x: L, y: 4.7, w: CW, h: 0.5, fontSize: 15 });
-  T(s, "각 단계로 넘어가는 기준(에러율, 가드레일)을 실험 전에 정해 둡니다",
+  T(s, "단계를 넘기는 기준(에러율, 가드레일)은 실험 전에 정한다",
     { x: L, y: 5.3, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
-  T(s, [R("램프업은 위험을 제한하는 절차  ", { bold: true, color: C.accent4 }),
-    R("효과를 빨리 찾는 절차가 아닙니다. 1%에서 좋아 보인다고 바로 늘리면 Peeking과 같은 문제가 생깁니다")],
+  T(s, [R("램프업 = 위험 제한  ", { bold: true, color: C.accent4 }),
+    R("효과를 빨리 찾는 절차가 아니다 · 1%에서 좋아 보인다고 늘리면 Peeking과 같다")],
   { x: L, y: 5.8, w: CW, h: 0.5, fontSize: 15 });
 }
 {
@@ -1132,7 +1197,7 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
     "A와 B에 똑같은 경험을 보여주는 테스트입니다. 차이가 없어야 정상이지만, α 5%이면 100번 중 약 5번은 우연히 유의하게 나옵니다. "
     + "그보다 훨씬 자주 유의하면 배정이나 분산 계산에 문제가 있다는 신호입니다. A/A에서 구한 분산은 표본 크기 계산에도 씁니다. 위키 09편 1.1: A/A의 핵심은 차이가 없어야 한다가 아니라, 차이가 없는 상황에서 시스템이 차이를 만들어내지 않는지 확인하는 것입니다.");
   T(s, "100번 중 약 5번", { x: L, y: 2.1, w: 6.4, h: 1.2, fontSize: 54, bold: true, color: C.accent1 });
-  T(s, "A/A 테스트에서 '유의'가 나오는 정상 빈도 (α = 5%)\n이보다 훨씬 많으면 실험 시스템을 의심합니다",
+  T(s, "A/A에서 '유의'가 나오는 정상 빈도 (α = 5%)\n훨씬 잦으면 → 시스템 의심",
     { x: L, y: 3.35, w: 6.2, h: 0.9, fontSize: 15, color: C.text2 });
   T(s, [
     BR("한 번 유의했다고 고장은 아니다. 이런 패턴을 본다", { bold: true, fontSize: 15, paraSpaceAfter: 4 }),
@@ -1163,11 +1228,11 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
       showTitle: true, title: "일별 상대 효과(%) · 교육용 예시 수치" }));
   T(s, [
     BR("첫 주만 보면 과대평가", { bold: true, fontSize: 20 }),
-    BR("1~3일 효과는 신기효과가 섞여 있습니다", { fontSize: 15, color: C.text2, paraSpaceAfter: 16 }),
+    BR("1~3일 효과엔 신기효과가 섞여 있다", { fontSize: 15, color: C.text2, paraSpaceAfter: 16 }),
     BR("요일마다 사용자가 다르다", { bold: true, fontSize: 20 }),
-    BR("6~7일, 13~14일 주말 사용자는 주중과 다릅니다. 완전한 주 단위로 돌립니다", { fontSize: 15, color: C.text2, paraSpaceAfter: 16 }),
+    BR("주말 사용자 ≠ 주중 사용자 → 완전한 주 단위로", { fontSize: 15, color: C.text2, paraSpaceAfter: 16 }),
     BR("'무조건 2주' 규칙은 없다", { bold: true, fontSize: 20 }),
-    R("필요한 표본을 채웠나, 주요 행동 주기를 포함했나, 초기 시간 효과가 결과를 지배하지 않나로 판단합니다", { fontSize: 15, color: C.text2 }),
+    R("판단 기준: 필요 표본 · 행동 주기 포함 · 초기 시간 효과가 지배하지 않음", { fontSize: 15, color: C.text2 }),
   ], { x: 8.8, y: 2.0, w: 3.8, h: 4.3 });
 }
 {
@@ -1180,7 +1245,7 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
     ["페이지당 클릭률 (사용자 단위 배정)", "비율의 비율", { text: "Delta Method + z-test", options: { bold: true, color: HEX.blue } }, "배정 단위 ≠ 분석 단위"],
     ["요금제 선택 (3개 이상)", "범주 분포", { text: "카이제곱 검정", options: { bold: true, color: HEX.blue } }, "어느 범주가 다른지는 따로 확인"],
   ], { x: L, y: 2.0, w: CW, colW: [3.5, 2.2, 2.9, 3.33], rowH: 0.72, fontSize: 15 });
-  T(s, "공통 3주차에서 배운 z-test를 그대로 씁니다. 새로운 건 '무엇을 비교하느냐'입니다",
+  T(s, "검정 자체는 공통 3주차 그대로 · 달라지는 건 무엇을 비교하느냐",
     { x: L, y: 5.75, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
 }
 {
@@ -1257,7 +1322,7 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
   });
   T(s, [R("실무에서 이렇게 말한다  ", { bold: true, color: C.accent1 }),
     R("\"결제 전환율이 0.8%p 올랐고, 95% 신뢰구간은 +0.1%p에서 +1.5%p입니다\"")], { x: L, y: 5.75, w: CW, h: 0.5, fontSize: 15 });
-  T(s, "엄밀히는 '같은 절차를 반복하면 만든 구간의 95%가 참값을 포함한다'는 뜻입니다. '이 구간에 참값이 있을 확률이 95%'는 정확한 해석이 아닙니다",
+  T(s, "엄밀한 뜻: 같은 절차를 반복하면 구간의 95%가 참값을 포함 ('이 구간에 참값이 있을 확률 95%'가 아님)",
     { x: L, y: 6.25, w: CW, h: 0.5, fontSize: 14, color: C.text2 });
 }
 {
@@ -1271,7 +1336,7 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
   ], { x: L, y: 2.0, w: 8.0, colW: [2.0, 3.0, 3.0], rowH: 1.05, fontSize: 15 });
   T(s, [
     BR("0.12%p", { bold: true, fontSize: 54, color: C.accent1 }),
-    R("기준 전환율 10%, 그룹당 500만 명이면 이 정도 차이도 p < 0.05가 됩니다. 유의함은 '크다'는 뜻이 아닙니다.",
+    R("기준 전환율 10%, 그룹당 500만 명이면 이 차이도 p < 0.05 · 유의 ≠ 크다",
       { fontSize: 15, color: C.text2 }),
   ], { x: 9.2, y: 2.0, w: 3.4, h: 2.6 });
   const order = ["효과 크기", "신뢰구간", "p-value", "비용·리스크를 포함한 의사결정"];
@@ -1322,7 +1387,7 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
     T(s, [BR(h, { bold: true, fontSize: 20 }), R(d, { fontSize: 15, color: C.text2 })], { x: x + 1.0, y: y + 0.05, w: 4.9, h: 1.2 });
   });
   T(s, [R("CUPED가 하는 일  ", { bold: true, color: C.accent1 }),
-    R("효과를 키우는 게 아니라 신뢰구간을 좁힌다 → 더 작은 효과를 잡고, 같은 검정력을 더 적은 표본·짧은 기간으로 얻는다")],
+    R("효과는 그대로, 신뢰구간만 좁힌다 → 더 작은 효과 탐지, 더 적은 표본·짧은 기간")],
   { x: L, y: 4.85, w: CW, h: 0.8, fontSize: 15 });
   SRC(s, "위키 09편 1.5 · 출처: Deng et al. (2013), WSDM", 6.45);
 }
@@ -1392,7 +1457,6 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "약 20�
 // ======================================================
 // Ch4
 // ======================================================
-section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "약 15분 · 개념만 잡고, 직접 겪는 건 뒤의 함정 세션에서");
 {
   const s = content("Ch3 실행과 분석", "Ch3 · 반복 노출", "같은 사람이 여러 번 보면, 일차별로 읽는다",
     "위키 04편 3.5. 사용자 단위 실험에서 반복 노출은 설계 의도이지만 효과가 처음부터 끝까지 같다는 보장은 없습니다. "
@@ -1412,6 +1476,7 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
   T(s, [R("실무에서 이렇게 말한다  ", { bold: true, color: C.accent1 }),
     R("\"1~3일차 효과는 +2%p였지만 8~14일차에는 +0.8%p로 줄었습니다\" (예시)")], { x: L, y: 5.6, w: CW, h: 0.5, fontSize: 15 });
 }
+section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "개념을 먼저 잡고, 직접 겪는 건 뒤의 함정 세션에서");
 {
   const s = content("Ch4 함정과 고급 설계", "Ch4 · 함정 지도", "실무에서 자주 밟는 여섯 가지 함정",
     "여기서는 이름과 증상, 처방만 연결합니다. 실제로 겪어보는 것은 뒤의 함정·해석·공유 세션과 실습 앱의 함정 연구소에서 합니다.");
@@ -1438,14 +1503,14 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
   T(s, [
     BR("Sequential Testing", { bold: true, fontSize: 20, color: C.accent1 }),
     BR("중간 확인을 전제로 기준을 설계한다", { fontSize: 15, paraSpaceAfter: 8 }),
-    R("Always-Valid p-value: 언제 멈춰도 α 유지. 대신 검정력이 조금 낮다", { fontSize: 15, color: C.text2 }),
+    R("언제 멈춰도 α 유지 · 대가로 검정력이 조금 낮다", { fontSize: 15, color: C.text2 }),
   ], { x: 6.95, y: 2.1, w: 5.6, h: 1.8 });
   T(s, [R("실무에서 이렇게 말한다  ", { bold: true, color: C.accent1 }),
     R("\"매일 대시보드는 보되, 결정은 미리 정한 종료일이나 Sequential 기준으로만 합니다\"")], { x: L, y: 4.3, w: CW, h: 0.6, fontSize: 15 });
   T(s, [
-    BR("Sequential Testing은 '매일 보고 마음대로 멈추기'가 아니다", { bold: true, fontSize: 20, paraSpaceAfter: 6 }),
-    BR("경계값이나 오류율 사용 방식을 미리 설계한다: Alpha Spending, Group Sequential Test, Always-Valid p-value", { bullet: true }),
-    R("결과가 궁금해서 실험 중간에 Sequential로 바꾸지 않는다. 중단 규칙까지 실험 전에 정한다", { bullet: true }),
+    BR("'매일 보고 마음대로 멈추기'가 아니다", { bold: true, fontSize: 20, paraSpaceAfter: 6 }),
+    BR("방법: Alpha Spending, Group Sequential Test, Always-Valid p-value", { bullet: true }),
+    R("중간에 Sequential로 갈아타지 않는다 · 중단 규칙은 실험 전에", { bullet: true }),
   ], { x: L, y: 5.0, w: CW, h: 1.5, fontSize: 15, paraSpaceAfter: 4 });
 }
 {
@@ -1460,9 +1525,9 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
   ], { x: L, y: 2.0, w: 8.6, colW: [1.9, 2.2, 2.2, 2.3], rowH: 0.65, fontSize: 15 });
   T(s, [
     BR("왜 뒤집히나", { bold: true, fontSize: 20 }),
-    BR("전환율이 낮은 모바일이 B에 80%, A에 20%로 쏠렸습니다", { fontSize: 15, color: C.text2, paraSpaceAfter: 14 }),
-    BR("실험에서는", { bold: true, fontSize: 20 }),
-    R("그룹 간 구성이 다르다는 것 자체가 배정 문제의 신호입니다. 램프업 중 비율을 바꿨을 때도 생깁니다", { fontSize: 15, color: C.text2 }),
+    BR("전환율 낮은 모바일이 B 80%, A 20%", { fontSize: 15, color: C.text2, paraSpaceAfter: 14 }),
+    BR("실험이라면", { bold: true, fontSize: 20 }),
+    R("그룹 구성이 다르다 = 배정 문제 신호 · 램프업 중 비율 변경에서도 생김", { fontSize: 15, color: C.text2 }),
   ], { x: 9.7, y: 2.0, w: 2.95, h: 4.0 });
   SRC(s, "교육용 예시 수치");
 }
@@ -1487,9 +1552,9 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
     R("분석  ", { bold: true }), R("결과를 보고 특정 사용자만 제거"),
   ], { x: 8.2, y: 2.1, w: 4.45, h: 3.3, fontSize: 15 });
   T(s, [R("점검 요령  ", { bold: true, color: C.accent1 }),
-    R("배정 단위로 센다(사용자 배정이면 세션이 아니라 고유 사용자 수). 기기·브라우저·날짜·국가·유입 채널로 쪼개 보면 원인이 보인다")],
+    R("배정 단위로 센다(사용자 배정 → 고유 사용자 수) · 기기·브라우저·날짜·국가·유입 채널로 쪼개 원인 찾기")],
   { x: L, y: 5.45, w: CW, h: 0.7, fontSize: 15 });
-  T(s, "SRM은 결과 지표가 아니라 실험을 믿을 수 있는지 보는 지표(Trustworthiness Metric)입니다. 문제는 인원수 차이가 아니라 누가 빠졌는지 모른다는 것",
+  T(s, "SRM = 결과 지표가 아니라 신뢰성 지표(Trustworthiness Metric) · 핵심은 인원수가 아니라 누가 빠졌는지 모른다는 것",
     { x: L, y: 6.15, w: CW, h: 0.5, fontSize: 14, color: C.text2 });
 }
 {
@@ -1506,7 +1571,7 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
       R(b, { fontSize: 15, color: C.text2 })], { x, y: 2.1, w: 3.7, h: 3.0 });
   });
   T(s, [R("결과를 본 뒤 필터링하지 않는다  ", { bold: true, color: C.accent4 }),
-    R("'결제를 시도한 사용자만', '10초 이상 본 사용자만'처럼 처치 이후 행동으로 분석 대상을 고르면 서로 다른 사람을 비교하게 된다. 분석 대상과 제외 규칙은 실험 전에 정한다")],
+    R("'결제 시도한 사용자만', '10초 이상 본 사용자만' → 처치 이후 행동으로 고르면 다른 사람끼리 비교 · 제외 규칙은 실험 전에")],
   { x: L, y: 5.2, w: CW, h: 0.9, fontSize: 15 });
 }
 {
@@ -1514,7 +1579,7 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
     "위키 06편 1.1~1.3. SUTVA는 한 사용자가 받은 처치가 다른 사용자의 결과에 영향을 주지 않는다는 가정이고, 이것이 깨지는 현상이 간섭입니다. "
     + "실무에서는 Spillover, Leakage라고도 부릅니다. 직접 간섭은 사용자끼리 연결된 서비스(SNS, 메신저, 게임)에서, "
     + "간접 간섭은 한정된 자원이나 같은 시장을 공유할 때(메이플 옥션의 매물, Airbnb 숙소, Uber 드라이버, 광고 예산, 서버) 생깁니다.");
-  T(s, [R("SUTVA  ", { bold: true, color: C.accent1 }), R("내 처치가 남의 결과를 바꾸지 않는다는 가정. 이것이 깨지면 간섭입니다 (실무: Spillover, Leakage)")],
+  T(s, [R("SUTVA  ", { bold: true, color: C.accent1 }), R("(Ch2)이 깨지는 현상 = 간섭 · 실무 용어 Spillover, Leakage")],
     { x: L, y: 1.9, w: CW, h: 0.45, fontSize: 15 });
   const col = (x, head, sub, chain, examples, color) => {
     T(s, [BR(head, { bold: true, fontSize: 20, color }), R(sub, { fontSize: 14, color: C.text2 })], { x, y: 2.6, w: 5.4, h: 0.8 });
@@ -1606,8 +1671,8 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
     [b("Multi-armed Bandit"), "빨리 좋은 쪽으로 트래픽을 몰고 싶을 때", "탐색 vs 활용. Thompson Sampling, UCB, ε-greedy", "프로모션 문구, 배너"],
     [b("Interleaving"), "두 랭킹 알고리즘을 비교할 때", "두 결과를 한 목록에 섞어 어느 쪽을 클릭하는지 본다", "검색, 추천"],
   ], { x: L, y: 1.95, w: CW, colW: [2.8, 3.3, 3.6, 2.23], rowH: 0.8, fontSize: 15 });
-  T(s, [BR("밴딧은 빨리 이기는 쪽을 찾지만, 효과 크기 추정은 A/B 테스트보다 부정확합니다", { paraSpaceAfter: 6 }),
-    R("간섭에 대응하는 Cluster · Geo · Switchback 설계는 앞 장에서 다뤘습니다")],
+  T(s, [BR("밴딧: 이기는 쪽은 빨리 찾지만 효과 크기 추정은 부정확", { paraSpaceAfter: 6 }),
+    R("Cluster · Geo · Switchback → 간섭 줄이기 슬라이드")],
     { x: L, y: 4.75, w: CW, h: 0.9, fontSize: 15, color: C.text2 });
 }
 {
@@ -1635,7 +1700,7 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
 // ======================================================
 // Ch5
 // ======================================================
-section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "약 8분 · 그리고 의사결정으로 닫기");
+section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "그리고 의사결정으로 닫기");
 {
   const s = content("Ch5 사례와 결정", "Ch5 · 산업 사례", "실험을 잘하는 회사들이 오늘 개념을 어떻게 쓰나",
     "각 회사 사례는 오늘 다룬 개념과 연결해서 소개합니다. 세부 수치는 원문(기술 블로그, 논문)에서 확인하고 인용하세요. "
@@ -1656,7 +1721,7 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "약 8�
   const cols = [
     ["데이터로 결정하고 OEC를 공식화한다", "무엇을 성공으로 볼지 먼저 정하고, 가드레일로 무엇을 훼손하면 안 되는지도 정한다", "A/B뿐 아니라 조사, 유지보수 비용 같은 여러 데이터로 판단한다"],
     ["실험 인프라와 신뢰성에 투자한다", "아이디어 → 빠른 실험 → 측정 → 판단 → 다음 실험이 반복되는 환경을 만든다", "예: 토스 TUBA, Microsoft ExP"],
-    ["아이디어 평가에 서툴다는 걸 인정한다", "Microsoft에서 지표를 개선한 아이디어는 약 3분의 1", "잭팟보다 많은 아이디어를 싸게 실험하는 구조가 중요하다"],
+    ["아이디어 평가에 서툴다는 걸 인정한다", "좋아 보이는 것 ≠ 실제로 좋은 것", "잭팟 한 번보다 많은 아이디어를 싸게 실험하는 구조"],
   ];
   cols.forEach(([h, a, d], i) => {
     const x = L + i * 4.05;
@@ -1664,9 +1729,6 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "약 8�
     T(s, [BR(h, { bold: true, fontSize: 20, paraSpaceAfter: 8 }), BR(a, { fontSize: 15, paraSpaceAfter: 8 }),
       R(d, { fontSize: 14, color: C.text2 })], { x, y: 2.6, w: 3.7, h: 2.5 });
   });
-  T(s, [R("팀마다 OEC는 달라도 장기 목표는 같다  ", { bold: true, color: C.accent1 }),
-    R("검색팀 검색 후 구매율 · 결제팀 결제 완료율 · 배송팀 정시 배송률 → 회사 전체 고객 생애가치(CLV)")],
-  { x: L, y: 5.45, w: CW, h: 0.8, fontSize: 15 });
   SRC(s, "출처: Kohavi, Tang, Xu (2020) · 위키 11편 1장", 6.45);
 }
 {
@@ -1690,8 +1752,6 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "약 8�
     BR("촬영 단계 통과율 + 사후 검증 반려율", { fontSize: 15 }),
     R("원활하게 통과하면서 잘못된 신분증은 걸러지는가를 지표 조합으로 측정", { fontSize: 15, color: C.text2 }),
   ], { x: 8.55, y: 1.9, w: 4.1, h: 4.0 });
-  T(s, [R("좋은 OEC  ", { bold: true, color: C.accent1 }), R("① 단기간에 측정 가능 ② 실험 변화에 민감 ③ 회사의 장기 목표를 예측")],
-    { x: L, y: 5.6, w: CW, h: 0.45, fontSize: 15 });
   SRC(s, "출처: 토스 기술 블로그 「진짜 A/B 테스트」, 「토스뱅크가 AI로 보안과 효율도 챙기는 방법」 · 위키 11편 1.1", 6.45);
 }
 {
@@ -1714,11 +1774,11 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "약 8�
     T(s, t, { x, y: 5.0, w: 1.9, h: 0.5, fontSize: 20, bold: true, color: i === 2 ? C.accent1 : C.text1 });
     if (i < flow.length - 1) arrow(s, x + 1.85, 5.25, 0.5);
   });
-  T(s, "A/B 테스트는 이 반복에서 '측정하고 검증하는' 역할을 맡습니다", { x: L, y: 5.7, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
+  T(s, "A/B 테스트의 자리: 이 반복의 '측정·검증'", { x: L, y: 5.7, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
   SRC(s, "위키 11편 1.2", 6.45);
 }
 {
-  const s = content("Ch5 사례와 결정", "Ch5 · 실험 성숙도 모델", "Crawl에서 Fly까지: 실험이 기본 방식이 되기까지",
+  const s = content("Ch5 사례와 결정", "Ch5 · 실험 성숙도 모델", "실험 성숙도: Crawl → Walk → Run → Fly",
     "위키 11편 3.1 (Kohavi 책). 핵심은 실험 횟수가 아니라 측정할 수 있는가 → 믿을 수 있게 실험하는가 → 대규모로 반복할 수 있는가 → 실험이 기본 의사결정 방식인가입니다. "
     + "빈도는 대략적인 기준(rough rule of thumb)일 뿐 절대적인 경계가 아닙니다. Walk 단계의 계측 검증, A/A, SRM은 Ch3·Ch4에서 다룬 내용입니다.");
   const b = (t, color) => ({ text: t, options: { bold: true, color: color || HEX.ink } });
@@ -1740,7 +1800,7 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "약 8�
     + "민주화는 누구나 실험할 수 있게 하되, 가드레일과 리뷰로 품질을 지키는 것입니다.");
   const cols = [
     ["Feature Flag", "코드 배포와 기능 노출을 분리한다", "램프업, 즉시 롤백, 단계별 노출"],
-    ["Experimentation Platform", "배정·로깅·분석을 자동화한다", "실험 한 번의 비용이 낮아진다. Bing의 아이디어도 이 덕분에 쉽게 시험할 수 있었다"],
+    ["Experimentation Platform", "배정·로깅·분석을 자동화한다", "실험 한 번의 비용이 낮아진다"],
     ["Democratization", "누구나 가설을 실험으로 옮긴다", "대신 가드레일, SRM 자동 검사, 실험 리뷰로 품질을 지킨다"],
   ];
   cols.forEach(([h, a, b], i) => {
@@ -1793,7 +1853,7 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "약 8�
 {
   const s = pres.addSlide({ masterName: "COVER", sectionTitle: "Ch5 사례와 결정" });
   s.addText("정리", { placeholder: "title" });
-  s.addText("이제 우리 조 사례로 직접 설계하고 돌려봅니다 → 실습 75분", { placeholder: "sub" });
+  s.addText("이제 우리 조 사례로 직접 설계하고 돌려봅니다", { placeholder: "sub" });
   T(s, [
     BR("1   랜덤 배정이 인과를 말할 수 있게 해 준다", { paraSpaceAfter: 14 }),
     BR("2   가설·OEC·가드레일·MDE는 실험 전에 정한다", { paraSpaceAfter: 14 }),
@@ -1801,25 +1861,7 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "약 8�
   ], { x: 7.6, y: 2.6, w: 5.2, h: 3.0, fontSize: 15, color: "FFFFFF", bold: true });
   s.addNotes("세 가지만 기억하면 됩니다. 실습에서는 조마다 실제 기업 사례 하나를 골라, 같은 가상 모집단 위에서 제출한 설계대로 실험을 시뮬레이션합니다.");
 }
-{
-  const s = content("Ch5 사례와 결정", "참고자료", "더 읽을거리",
-    "Kohavi 책과 Udacity 강의를 메인으로, 나머지는 토픽별로 참고합니다.");
-  T(s, [
-    BR("메인 교재", { bold: true, color: C.accent1, fontSize: 14 }),
-    BR("Kohavi, Tang, Xu (2020). Trustworthy Online Controlled Experiments. Cambridge University Press"),
-    BR("Udacity: A/B Testing by Google", { paraSpaceAfter: 12 }),
-    BR("논문", { bold: true, color: C.accent1, fontSize: 14 }),
-    BR("Kohavi et al. (2009). Controlled experiments on the web: survey and practical guide"),
-    BR("Deng et al. (2013). Improving the Sensitivity of Online Controlled Experiments by Utilizing Pre-Experiment Data. WSDM"),
-    BR("Kohavi & Thomke (2017). The Surprising Power of Online Experiments. Harvard Business Review", { paraSpaceAfter: 12 }),
-    BR("더 깊이", { bold: true, color: C.accent1, fontSize: 14 }),
-    BR("Causal Inference for the Brave and True (무료 온라인북)"),
-    BR("Netflix Tech Blog, Uber Engineering, Eppo Blog, Statsig Blog · Evan Miller's A/B Test Calculator", { paraSpaceAfter: 12 }),
-    BR("한국어", { bold: true, color: C.accent1, fontSize: 14 }),
-    BR("데이터리안 \"A/B 테스트란\" → 데이터리안 YouTube → 토스 기술 블로그 \"진짜 A/B 테스트\""),
-    R("저장소 위키 docs/ab-testing: 01 왜 A/B 테스트 · 02 가설 수립 · 03 지표 설계 · 04 실험 단위 · 05 실험 운영 설계 · 06·07 간섭 · 08 윤리 · 09·10 실무 (1)(2) · 11 실험 플랫폼과 문화"),
-  ], { x: L, y: 1.9, w: CW, h: 4.8, fontSize: 14 });
-}
+addReferenceSlides();
 
 // ---------- 저장 + 테마 색 + 한글(ea) 폰트 ----------
 // pptxgenjs는 테마 색을 쓰지 못해 저장 후 theme1.xml의 색 구성표를 THEME 값으로 바꾼다.
