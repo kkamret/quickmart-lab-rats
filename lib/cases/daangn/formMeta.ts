@@ -56,9 +56,9 @@ export const formMeta: Record<string, FieldMeta[]> = {
     },
     { name: "run_aa_first", label: "본 실험 전에 A/A 테스트를 먼저 할까요?", help: "두 그룹에 같은 화면을 보여줘서 플랫폼이 믿을 만한지 확인해요.", type: "boolean" },
     { name: "aa_days", label: "A/A 기간", help: "1~14일. A/A 를 먼저 하는 경우에만 써요.", type: "number", min: 1, max: 14, step: 1, unit: "일" },
-    { name: "alpha", label: "유의수준(α)", type: "select", options: ALPHA },
-    { name: "power", label: "검정력", type: "select", options: POWER },
-    { name: "mde_pp", label: "최소 검출 효과(MDE)", help: "분석하는 작성률의 절대 %p", type: "number", min: 0.01, step: 0.1, unit: "%p" },
+    { name: "alpha", label: "유의수준(α)", help: "엄격하게(작게) 잡을수록 필요한 표본과 실험 기간이 늘어요.", type: "select", options: ALPHA },
+    { name: "power", label: "검정력", help: "높게 잡을수록 실제 효과를 놓칠 가능성이 줄지만 표본과 기간이 늘어요.", type: "select", options: POWER },
+    { name: "mde_pp", label: "최소 검출 효과(MDE)", help: "분석하는 작성률의 절대 %p. 통계가 아니라 비즈니스가 정해요. 도입할 가치가 있는 최소 효과를 기준으로 잡아요.", type: "number", min: 0.01, step: 0.1, unit: "%p" },
     { name: "duration_days", label: "실험 기간", help: "7일 이상", type: "number", min: 7, max: 28, step: 1, unit: "일" },
     { name: "stopping", label: "중간 확인 규칙", type: "select", options: STOPPING },
   ],
@@ -96,7 +96,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
       name: "randomization_unit", label: "실험 단위 (Randomization Unit)", type: "select",
       options: [
         { value: "user", label: "사용자", desc: "같은 동네 사람들이 서로 다른 그룹에 섞여요." },
-        { value: "neighborhood", label: "동네(클러스터)", desc: "동네 전체를 한 그룹으로 묶어요. 6,500개 동네가 단위예요." },
+        { value: "neighborhood", label: "동네(클러스터)", desc: "동네 전체를 한 그룹으로 묶어요. 6,500개 동네가 단위예요. 서로 영향을 주는 사람들을 한 덩어리로 묶어 배정하는 방식(Cluster Randomization)이에요." },
       ],
     },
     {
@@ -111,16 +111,16 @@ export const formMeta: Record<string, FieldMeta[]> = {
       options: [{ value: "search_to_chat", label: "검색 → 채팅 시작 전환율" }, { value: "search_retry", label: "검색 재시도율" }],
     },
     {
-      name: "analysis_se", label: "표준오차 계산 방식", type: "select",
+      name: "analysis_se", label: "표준오차 계산 방식", help: "배정 단위와 분석 단위가 다를 때 신뢰구간을 어떻게 계산하나요?", type: "select",
       options: [
         { value: "naive", label: "사용자(관측) 단위로 독립이라고 가정" },
         { value: "cluster_robust", label: "클러스터 강건 SE", desc: "같은 동네 안의 상관을 반영해요." },
       ],
     },
     { name: "duration_days", label: "실험 기간", help: "7~42일", type: "number", min: 7, max: 42, step: 1, unit: "일" },
-    { name: "alpha", label: "유의수준(α)", type: "select", options: ALPHA },
-    { name: "power", label: "검정력", type: "select", options: POWER },
-    { name: "mde_pct", label: "최소 검출 효과(MDE)", help: "Primary 지표의 상대 %", type: "number", min: 0.1, step: 0.1, unit: "%" },
+    { name: "alpha", label: "유의수준(α)", help: "엄격하게(작게) 잡을수록 필요한 표본과 실험 기간이 늘어요.", type: "select", options: ALPHA },
+    { name: "power", label: "검정력", help: "높게 잡을수록 실제 효과를 놓칠 가능성이 줄지만 표본과 기간이 늘어요.", type: "select", options: POWER },
+    { name: "mde_pct", label: "최소 검출 효과(MDE)", help: "Primary 지표의 상대 %. 통계가 아니라 비즈니스가 정해요. 도입할 가치가 있는 최소 효과를 기준으로 잡아요.", type: "number", min: 0.1, step: 0.1, unit: "%" },
     { name: "qualitative_weight", label: "정성 의견을 결정에 어떻게 반영할까요?", help: "결과 화면의 사용자 의견을 어떻게 다룰지 미리 적어요.", type: "textarea" },
   ],
 };

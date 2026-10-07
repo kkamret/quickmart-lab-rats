@@ -36,7 +36,7 @@ const common: FieldMeta[] = [
     name: "unit", label: "실험 단위 (Randomization Unit)", help: "무엇 단위로 무작위 배정하나요?", type: "select",
     options: [
       { value: "user", label: "사용자", desc: "같은 사람은 항상 같은 그룹이에요." },
-      { value: "session", label: "세션", desc: "같은 사람이 세션마다 다른 그룹을 볼 수 있어요." },
+      { value: "session", label: "세션", desc: "같은 사람이 세션마다 다른 그룹을 볼 수 있어요. 사람을 계속 알아보기 어려울 때 쓰는 단위예요." },
       { value: "pageview", label: "페이지뷰", desc: "화면을 열 때마다 그룹이 바뀔 수 있어요." },
     ],
   },
@@ -44,18 +44,18 @@ const common: FieldMeta[] = [
   { name: "metrics.secondary", label: "Secondary·Driver 지표", help: "다음 가설을 찾는 데 쓰는 지표", type: "multiselect", options: METRIC_OPTIONS },
   { name: "metrics.guardrails", label: "Guardrail 지표", help: "나빠지면 안 되는 지표", type: "multiselect", options: METRIC_OPTIONS },
   {
-    name: "alpha", label: "유의수준(α)", type: "select",
+    name: "alpha", label: "유의수준(α)", help: "엄격하게(작게) 잡을수록 필요한 표본과 실험 기간이 늘어요.", type: "select",
     options: [{ value: 0.01, label: "1%" }, { value: 0.05, label: "5%" }, { value: 0.1, label: "10%" }],
   },
   {
-    name: "power", label: "검정력", type: "select",
+    name: "power", label: "검정력", help: "높게 잡을수록 실제 효과를 놓칠 가능성이 줄지만 표본과 기간이 늘어요.", type: "select",
     options: [{ value: 0.7, label: "70%" }, { value: 0.8, label: "80%" }, { value: 0.9, label: "90%" }],
   },
-  { name: "mde_pp", label: "최소 검출 효과(MDE)", help: "비율 지표는 절대 %p, 금액 지표는 상대 %", type: "number", min: 0.01, step: 0.1, unit: "%p 또는 %" },
+  { name: "mde_pp", label: "최소 검출 효과(MDE)", help: "비율 지표는 절대 %p, 금액 지표는 상대 %. 통계가 아니라 비즈니스가 정해요. 도입할 가치가 있는 최소 효과를 기준으로 잡아요.", type: "number", min: 0.01, step: 0.1, unit: "%p 또는 %" },
   { name: "duration_days", label: "실험 기간", help: "7일 미만은 입력할 수 없어요.", type: "number", min: 7, max: 28, step: 1, unit: "일" },
   { name: "allocation", label: "투입 비율", help: "범위 트래픽 중 실험에 쓰는 비율", type: "number", min: 0.05, max: 1, step: 0.05 },
   {
-    name: "ramp", label: "램프업", type: "select",
+    name: "ramp", label: "램프업", help: "같은 표본이면 A:B를 50:50으로 나눌 때 가장 효율적이고, B를 10%만 노출하는 건 위험 관리용이에요. 대신 B 표본이 천천히 쌓여요.", type: "select",
     options: [
       { value: "none", label: "처음부터 전부 노출" },
       { value: "10_50_100", label: "1일차 10% → 2일차 50% → 3일차부터 100% 노출" },
