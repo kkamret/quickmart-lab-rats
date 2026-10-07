@@ -1,6 +1,6 @@
 # A/B 테스트 실무 (1): 실험 실행과 결과 해석
 
-[← 이전 글](08-ethics.md) · [목차](README.md) · [다음 글 →](10-experimentation-platform.md)
+[← 이전 글](08-ethics.md) · [목차](README.md) · [다음 글 →](10-practice-pitfalls.md)
 
 > **작성 상태:** 원문을 작성하기 전이라 다룰 내용의 개요만 있습니다.
 
