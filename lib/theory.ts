@@ -39,6 +39,12 @@ const WIKI_BASE = "https://github.com/kkamret/quickmart-lab-rats/blob/main/docs/
 /** 입력란·경고 옆 작은 배지. 개념 이름은 빼고 챕터·슬라이드만 보여 준다(정답 공개 전 함정 이름을 숨기는 규칙). */
 export const theoryBadge = (k: TheoryKey) => `Ch${THEORY[k].chapter}·${THEORY[k].slides}`;
 
+/** 정답 공개 전 배지 툴팁. 개념 이름을 담지 않는다. */
+export const NEUTRAL_BADGE_TITLE = "이론 수업 슬라이드 번호";
+
+/** "Ch3 · 덱 42장" (개념 이름 없이 챕터·슬라이드만) */
+export const theorySlideOnly = (k: TheoryKey) => `Ch${THEORY[k].chapter} · 덱 ${THEORY[k].slides}장`;
+
 /** "Ch2 · 가설 문장 구조 (덱 17장)" */
 export const theoryLabel = (k: TheoryKey) => `Ch${THEORY[k].chapter} · ${THEORY[k].title} (덱 ${THEORY[k].slides}장)`;
 
@@ -75,3 +81,6 @@ export const STEP_THEORY: Partial<Record<string, TheoryKey[]>> = {
   s6_final: ["predefine", "inference"],
   s7_lab: ["peeking", "simpson", "srm"],
 };
+
+/** 스텝 이론 복습 줄에 개념 이름을 보여 줘도 되는 스텝. 그 밖의 스텝은 챕터·슬라이드만 보여 준다. */
+export const TITLED_STEPS: ReadonlySet<string> = new Set(["s1_diagnose", "s2_design", "s3_run", "s6_final", "s7_lab"]);

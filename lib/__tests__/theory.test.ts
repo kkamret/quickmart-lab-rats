@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_THEORY, STEP_THEORY, THEORY, theoryBadge, theoryLabel, wikiHref, type TheoryKey } from "../theory";
+import { FIELD_THEORY, NEUTRAL_BADGE_TITLE, STEP_THEORY, THEORY, TITLED_STEPS, theoryBadge, theorySlideOnly, theoryLabel, wikiHref, type TheoryKey } from "../theory";
 import { STEP_KEYS } from "../steps";
 import { getClientCase } from "../cases/client-registry";
 import { CASE_KEYS } from "../cases";
@@ -49,6 +49,25 @@ describe("이론 연결 매핑", () => {
       expect(t.length, c).toBeGreaterThan(0);
       expect(new Set(t).size, c).toBe(t.length);
       for (const k of t) expect(THEORY[k], `${c}:${k}`).toBeDefined();
+    }
+  });
+});
+
+describe("정답 공개 전 함정 이름 숨김", () => {
+  it("theorySlideOnly 는 챕터·슬라이드만 보여 준다", () => {
+    expect(theorySlideOnly("analysis_unit")).toBe("Ch3 · 덱 42장");
+    expect(theorySlideOnly("analysis_unit")).not.toContain(THEORY.analysis_unit.title);
+  });
+  it("FIELD_THEORY 의 중립 툴팁·배지에 개념 이름이 없다", () => {
+    for (const k of new Set(Object.values(FIELD_THEORY))) {
+      expect(NEUTRAL_BADGE_TITLE, k).not.toContain(THEORY[k].title);
+      expect(theoryBadge(k), k).not.toContain(THEORY[k].title);
+    }
+  });
+  it("TITLED_STEPS 밖의 스텝은 theorySlideOnly 로 이름 없이 표시된다", () => {
+    for (const [s, ks] of Object.entries(STEP_THEORY)) {
+      if (TITLED_STEPS.has(s)) continue;
+      for (const k of ks!) expect(theorySlideOnly(k), `${s}:${k}`).not.toContain(THEORY[k].title);
     }
   });
 });
