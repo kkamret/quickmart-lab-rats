@@ -181,7 +181,7 @@
 
 ## 7. 덱 제작 기록
 
-초안: [`ab-testing-theory.pptx`](ab-testing-theory.pptx) (76장)
+초안: [`ab-testing-theory.pptx`](ab-testing-theory.pptx) (76장) · 생성 스크립트: [`build/`](build/README.md)
 
 ### 시간 때문에 뺀 슬라이드 (2026-10-05)
 
