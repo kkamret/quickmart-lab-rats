@@ -977,6 +977,55 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   ], { x: 8.4, y: 2.0, w: 4.2, h: 4.3, fontSize: 15 });
 }
 {
+  const s = content("Ch2 설계 구성요소", "Ch2 · α와 Power", "α와 Power를 엄격하게 잡을수록 실험은 길어진다",
+    "위키 05편 4.1. α와 Power는 마지막 검정 때 쓰는 숫자가 아니라 실험 전에 필요한 표본 수를 정하는 입력값입니다. "
+    + "0.05와 80%는 절대적인 정답이 아니라 관행입니다. 헛배포(False Positive) 비용이 크면 α를 더 엄격하게, 기회를 놓치기(False Negative) 싫으면 Power를 높이되, "
+    + "둘 다 표본과 기간이 늘어나는 대가가 있습니다. 예: 하루 실험 대상 10,000명, 필요한 표본 140,000명이면 약 14일.");
+  const b = (t, color) => ({ text: t, options: { bold: true, color: color || HEX.ink } });
+  table(s, ["설계 변경", "의미", "필요한 표본 수"], [
+    [b("α ↓"), "False Positive를 더 엄격하게 막는다", b("증가", HEX.neg)],
+    [b("α ↑"), "효과 있다고 판단하기 쉬워진다", b("감소", HEX.pos)],
+    [b("Power ↑"), "실제 효과를 놓칠 가능성을 줄인다", b("증가", HEX.neg)],
+    [b("Power ↓"), "실제 효과를 놓칠 가능성을 더 허용한다", b("감소", HEX.pos)],
+  ], { x: L, y: 1.9, w: 7.2, colW: [1.6, 3.9, 1.7], rowH: 0.56, fontSize: 15 });
+  const flow = ["α · Power 결정", "필요한 표본 수", "서비스 트래픽과 결합", "실험 기간"];
+  flow.forEach((t, i) => {
+    const y = 1.95 + i * 0.85;
+    T(s, t, { x: 8.4, y, w: 4.2, h: 0.45, fontSize: 20, bold: true, color: i === flow.length - 1 ? C.accent1 : C.text1 });
+    if (i < flow.length - 1) T(s, "↓", { x: 8.4, y: y + 0.42, w: 0.4, h: 0.4, fontSize: 15, color: C.accent6 });
+  });
+  T(s, [
+    BR("두 실수의 비용을 비교한다", { bold: true, fontSize: 20, paraSpaceAfter: 6 }),
+    BR("False Positive: 효과 없는 기능을 배포하면 얼마나 큰 문제가 생기나?", { bullet: true }),
+    R("False Negative: 좋은 기능을 버리면 얼마나 큰 기회를 잃나?", { bullet: true }),
+  ], { x: L, y: 5.1, w: 7.4, h: 1.3, fontSize: 15, paraSpaceAfter: 4 });
+  T(s, "예: 하루 10,000명, 필요 표본 140,000명 → 약 14일", { x: 8.4, y: 5.4, w: 4.25, h: 0.5, fontSize: 15, color: C.text2 });
+  SRC(s, "위키 05편 4.1", 6.45);
+}
+{
+  const s = content("Ch2 설계 구성요소", "Ch2 · MDE 정하기", "MDE는 통계가 아니라 비즈니스가 정한다",
+    "위키 05편 4.2. MDE는 감지할 수 있는 가장 작은 효과가 아니라, 주어진 α와 Power에서 일정한 확률로 잡도록 설계한 최소 효과 크기입니다. "
+    + "MDE보다 작은 효과도 유의하게 나올 수는 있습니다. 구현 비용을 정당화하려면 5%는 올라야 하는데 0.5%까지 잡도록 설계하면 표본과 시간을 낭비하고(Overpowered), "
+    + "50%로 잡으면 20~30%의 의미 있는 개선도 놓칩니다(Underpowered). 기간부터 정하고 MDE를 역으로 맞추지 말고, 의미 있는 효과부터 정합니다. "
+    + "표본 크기는 Baseline·분산, MDE, α, Power로 정해지며, Baseline의 영향은 지표 형태에 따라 다릅니다.");
+  T(s, [R("Baseline CVR 10% · MDE +1%p · Power 80%  ", { bold: true, color: C.accent1 }),
+    R("→ 10%가 11%로 바뀌는 변화가 실제로 있을 때 80% 확률로 잡도록 설계한다")], { x: L, y: 1.9, w: CW, h: 0.5, fontSize: 15 });
+  T(s, "MDE보다 작은 효과가 절대 유의하게 나오지 않는다는 뜻은 아닙니다", { x: L, y: 2.4, w: CW, h: 0.4, fontSize: 14, color: C.text2 });
+  const col = (x, head, sub, body, color) => T(s, [BR(head, { bold: true, fontSize: 20, color }), BR(sub, { fontSize: 15, paraSpaceAfter: 6 }),
+    R(body, { fontSize: 14, color: C.text2 })], { x, y: 3.1, w: 3.75, h: 1.7 });
+  col(L, "Overpowered", "MDE를 너무 작게: 0.5%", "5%는 올라야 의미 있는데 0.5%까지 잡으려고 표본과 시간을 낭비한다", C.accent5);
+  col(4.75, "적절한 MDE", "도입할 가치가 있는 최소 효과", "구현·운영 비용, 리스크, 기대 효과를 놓고 ROI로 정한다", C.accent1);
+  col(8.8, "Underpowered", "MDE를 너무 크게: 50%", "실제로 20~30% 개선이 있어도 안정적으로 잡지 못한다", C.accent4);
+  const flow = ["의미 있는 효과", "MDE", "α · Power", "필요 표본 수", "트래픽", "실험 기간"];
+  flow.forEach((t, i) => {
+    const x = L + i * 2.0;
+    T(s, t, { x, y: 5.25, w: 1.6, h: 0.5, fontSize: 15, bold: true, color: i === 0 ? C.accent1 : C.text1 });
+    if (i < flow.length - 1) arrow(s, x + 1.5, 5.45, 0.4);
+  });
+  T(s, "기간부터 정하고 MDE를 역으로 맞추지 않는다", { x: L, y: 5.85, w: CW, h: 0.4, fontSize: 14, color: C.text2 });
+  SRC(s, "위키 05편 4.2", 6.45);
+}
+{
   const s = content("Ch2 설계 구성요소", "Ch2 · 무작위 배정", "단순 배정, 층화 배정, 해싱 배정",
     "실무 실험 플랫폼은 대부분 해싱 배정을 씁니다. 사용자 ID와 실험별 salt를 해시해 버킷을 정하면, 같은 사용자는 항상 같은 그룹에 들어가고(지속성), "
     + "실험마다 salt가 달라 실험끼리 배정이 엮이지 않습니다. 층화는 표본이 작을 때 중요한 특성(플랫폼, 신규 여부)의 균형을 맞추는 방법입니다.");
@@ -996,6 +1045,32 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   ], { x: L, y: 4.6, w: CW, h: 1.0 });
   T(s, "실험마다 salt(\"exp_cart_v2\")가 달라 여러 실험의 배정이 서로 엮이지 않습니다",
     { x: L, y: 5.75, w: CW, h: 0.4, fontSize: 15, color: C.text2 });
+}
+{
+  const s = content("Ch2 설계 구성요소", "Ch2 · 배정 비율", "50:50이 가장 효율적이고, 90:10은 위험 관리용이다",
+    "위키 05편 4.3. 두 그룹의 조건이 같다면 같은 전체 표본에서 50:50이 비교 효율이 가장 좋습니다. 장애 위험이 있는 기능은 90:10처럼 일부에게 먼저 노출할 수 있지만, "
+    + "실험군 표본이 천천히 쌓여 같은 검정력에 더 많은 트래픽이나 시간이 필요합니다. 비대칭 배정은 통계적 효율보다 위험 관리, 비용, 트래픽 제약 때문에 선택합니다. "
+    + "좋은 배정의 핵심은 사용자 수를 맞추는 것이 아니라 처치 여부와 사용자 특성이 체계적으로 연결되지 않게 하는 것입니다.");
+  const row = (y, label, nB, note) => {
+    T(s, label, { x: L, y: y - 0.05, w: 1.6, h: 0.4, fontSize: 20, bold: true });
+    for (let i = 0; i < 20; i++) dot(s, 2.4 + i * 0.32, y, 0.2, i < 20 - nB ? HEX.blue : HEX.teal);
+    T(s, note, { x: 9.0, y: y - 0.05, w: 3.65, h: 0.7, fontSize: 14, color: C.text2 });
+  };
+  row(2.1, "50 : 50", 10, "같은 전체 표본에서 비교 효율이 가장 좋다");
+  row(2.9, "90 : 10", 2, "장애 위험이 있을 때 일부에게 먼저. 실험군 표본이 느리게 쌓인다");
+  T(s, [R("●", { color: C.accent1 }), R(" 대조군   "), R("●", { color: C.accent2 }), R(" 실험군")], { x: 2.4, y: 3.45, w: 4, h: 0.35, fontSize: 14, color: C.text2 });
+  T(s, [
+    BR("좋은 배정이란", { bold: true, fontSize: 20, paraSpaceAfter: 6 }),
+    R("A와 B의 사용자 수를 맞추는 것이 아니라, 처치 여부와 사용자 특성이 체계적으로 연결되지 않게 하는 것", { fontSize: 15 }),
+  ], { x: L, y: 4.15, w: 5.7, h: 1.6 });
+  vline(s, 6.55, 4.2, 1.7);
+  T(s, [
+    BR("실험 전에 정해 둘 것", { bold: true, fontSize: 20, paraSpaceAfter: 6 }),
+    BR("어떤 단위를 어떤 규칙으로 배정할지", { bullet: true }),
+    BR("배정 비율은 얼마인지", { bullet: true }),
+    R("필요하면 어떤 특성을 균형화할지 (층화)", { bullet: true }),
+  ], { x: 6.95, y: 4.15, w: 5.7, h: 1.8, fontSize: 15, paraSpaceAfter: 4 });
+  SRC(s, "위키 05편 4.3", 6.45);
 }
 {
   const s = content("Ch2 설계 구성요소", "Ch2 · SUTVA", "내 처치가 남의 결과를 바꾸면 안 된다",
