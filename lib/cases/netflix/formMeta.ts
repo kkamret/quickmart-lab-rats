@@ -72,7 +72,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
       options: [
         { value: "hours", label: "주간 시청 시간" },
         { value: "retention", label: "28일 리텐션", desc: "습관 형성에 시간이 걸려요." },
-        { value: "surrogate_2ep", label: "7일 내 시리즈 2화 이상 시청 비율 (대리 지표)" },
+        { value: "surrogate_2ep", label: "7일 내 시리즈 2화 이상 시청 비율 (대리 지표)", desc: "진짜 원하는 가치를 대신 재는 지표(proxy)예요." },
       ],
     },
     {

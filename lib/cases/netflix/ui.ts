@@ -28,7 +28,9 @@ export const netflixMeta = {
     "오프라인 지표와 온라인 성과의 간극", "실험 감도와 검정력", "인터리빙(Team Draft vs Balanced)", "위치 편향", "성과 귀속(Goodhart)", "다중검정",
     "2단계 실험 퍼널", "꼬리가 긴 지표(윈저라이징·로그)", "CUPED", "신규성 효과", "대리 지표", "장기 홀드아웃", "Multi-armed Bandit",
   ],
-  theory: ["error_power", "goodhart", "cuped", "multiple_testing", "novelty", "peeking", "metric_layers", "alpha_power", "mde", "driver", "ramp_up", "repeat_exposure"] as TheoryKey[],
+  theory: ["error_power", "goodhart", "cuped", "multiple_testing", "novelty", "peeking", "metric_layers", "alpha_power", "mde", "driver", "ramp_up", "repeat_exposure", "interleaving", "bandit", "proxy_metric", "tail_metric", "ab_n"] as TheoryKey[],
+  /** 덱·위키에 설명이 없는 개념 이름. 정답 공개 뒤에만 이름으로 보여 준다. */
+  outsideTheory: ["오프라인 평가와 온라인 성과의 간극", "인터리빙 섞는 방식(Team Draft vs Balanced)", "인터리빙 성과 귀속 기준", "위치 편향", "2단계 실험 퍼널", "밴딧의 피드백 지연", "장기 홀드아웃"] as string[],
 };
 
 export const netflixClient: ClientCase = {

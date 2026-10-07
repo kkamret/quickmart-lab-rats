@@ -46,6 +46,8 @@ export interface CasePlugin<D = unknown> {
     concepts: string[];
     /** 이 사례에서 쓰는 이론 개념 (정답 공개 때 "오늘 쓴 개념 ↔ 덱" 표에 쓴다) */
     theory: TheoryKey[];
+    /** 실습에서 쓰지만 덱·위키가 설명하지 않는 개념 이름 (정답 공개 뒤 이름만 보여 준다) */
+    outsideTheory: string[];
   };
   phases: PhaseDef[];
   designSchema: Record<string, ZodType>;

@@ -9,6 +9,7 @@ DA 트랙 A/B 테스트 실습 세션용 웹앱. 조마다 실제 테크 기업 
 - `docs/cases/{baemin,toss,daangn,netflix}.md`: 사례별 원문 사실, 모집단, 숨긴 효과, 설계→결과 규칙, 루브릭, 검증 시나리오
 - `docs/review-contract.md`: LLM 리뷰 계약(team / class / share)
 - `docs/ab-testing/README.md`: A/B 테스트 학습 위키 목차와 편집 원칙
+- `docs/theory-coverage.md`: 이론 덱·위키가 각 개념을 설명하는지 정리한 근거표와 앱 도움말용 패러프레이즈 은행(앱의 이론 연결 문구는 여기서만 가져온다)
 - `supabase/schema.sql`: DB
 - `reference/prototype.html`: UI·카피·디자인 토큰 원본(배민 사례 단일 HTML 프로토타입)
 
