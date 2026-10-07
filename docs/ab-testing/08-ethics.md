@@ -1,6 +1,6 @@
 # 신뢰할 수 있는 A/B 테스트의 조건 (3): 윤리 문제
 
-[← 이전 글](07-interference-solutions.md) · [목차](README.md) · [다음 글 →](09-experimentation-platform.md)
+[← 이전 글](07-interference-solutions.md) · [목차](README.md) · [다음 글 →](09-practice-execution.md)
 
 ## 2. A/B 테스트에서의 윤리 문제
 

@@ -12,7 +12,8 @@ A/B 테스트를 공부하며 직접 정리한 글을 모은 연재형 문서입
 6. [신뢰할 수 있는 A/B 테스트의 조건 (1): 간섭(Interference) 문제](06-interference.md)
 7. [신뢰할 수 있는 A/B 테스트의 조건 (2): 간섭 문제의 해결 방법](07-interference-solutions.md)
 8. [신뢰할 수 있는 A/B 테스트의 조건 (3): 윤리 문제](08-ethics.md)
-9. [실험 플랫폼과 데이터 기반 문화](09-experimentation-platform.md)
+9. [A/B 테스트 실무 (1): 실험 실행과 결과 해석](09-practice-execution.md) (작성 전, 개요만)
+10. [실험 플랫폼과 데이터 기반 문화](10-experimentation-platform.md)
 
 ## 편집 원칙
 
