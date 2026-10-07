@@ -1,8 +1,8 @@
 # 신뢰할 수 있는 A/B 테스트의 조건 (1): 간섭(Interference) 문제
 
-[← 이전 글](04-experimental-unit.md) · [목차](README.md) · [다음 글 →](06-interference-solutions.md)
+[← 이전 글](05-experiment-operations.md) · [목차](README.md) · [다음 글 →](07-interference-solutions.md)
 
-> **작성 상태:** 원문이 진행 중이며, 1장(간섭 문제)까지 작성되어 있습니다. 해결 방법은 [다음 글](06-interference-solutions.md)에서 다룹니다.
+> **작성 상태:** 원문이 진행 중이며, 1장(간섭 문제)까지 작성되어 있습니다. 해결 방법은 [다음 글](07-interference-solutions.md)에서 다룹니다.
 
 앞의 글들이 A/B 테스트를 하는 법을 다뤘다면, 이 글은 A/B 테스트 결과를 믿어도 되는가를 다룹니다.
 

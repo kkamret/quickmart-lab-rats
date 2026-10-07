@@ -1,6 +1,6 @@
 # 신뢰할 수 있는 A/B 테스트의 조건 (2): 간섭(Interference) 문제의 해결 방법
 
-[← 이전 글](05-interference.md) · [목차](README.md) · [다음 글 →](07-ethics.md)
+[← 이전 글](06-interference.md) · [목차](README.md) · [다음 글 →](08-ethics.md)
 
 ## 2. 간섭 문제의 해결 방법
 

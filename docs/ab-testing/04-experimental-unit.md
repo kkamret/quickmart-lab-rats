@@ -1,6 +1,6 @@
 # A/B 테스트 설계 기초 (3): 실험 단위 결정
 
-[← 이전 글](03-metrics.md) · [목차](README.md) · [다음 글 →](05-interference.md)
+[← 이전 글](03-metrics.md) · [목차](README.md) · [다음 글 →](05-experiment-operations.md)
 
 ## 3. 실험 단위 결정
 
