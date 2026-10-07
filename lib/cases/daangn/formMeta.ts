@@ -27,9 +27,9 @@ export const formMeta: Record<string, FieldMeta[]> = {
   diagnose: [
     { name: "background", label: "배경", help: "왜 이 실험을 하나요?", type: "textarea" },
     { name: "problem", label: "문제", help: "지금 무엇이 문제인가요?", type: "textarea" },
-    { name: "hypothesis.action", label: "Action: 무엇을 바꾸나요?", type: "textarea" },
-    { name: "hypothesis.behavior", label: "Behavior: 사용자 행동이 어떻게 달라지나요?", type: "textarea" },
-    { name: "hypothesis.impact", label: "Impact: 어떤 지표가 어느 방향으로 움직이나요?", type: "textarea" },
+    { name: "hypothesis.action", label: "대상과 Treatment: 누구에게 무엇을 적용하나요?", type: "textarea" },
+    { name: "hypothesis.behavior", label: "이유: 그래서 사용자 행동이 어떻게 달라지나요?", type: "textarea" },
+    { name: "hypothesis.impact", label: "Metric·방향·변화 크기: 어떤 지표가 얼마나 움직이나요?", type: "textarea" },
     { name: "primary_metric_definition", label: "메인 지표(답례 후기 작성률)의 정의", help: "무엇을 '작성했다'고 셀까요? 측정 시점도 정해야 해요.", type: "select", options: DEF_OPTIONS },
     { name: "success_criteria", label: "성공 기준", help: "결과를 보기 전에 숫자로 정해요.", type: "textarea" },
     { name: "risks", label: "리스크", type: "textarea" },

@@ -56,9 +56,9 @@ export const formMeta: Record<string, FieldMeta[]> = {
     { name: "rationale", label: "그렇게 생각한 이유", help: "CTR 이 오르는 게 사람들이 더 눌러서인지, 덜 보내서인지도 생각해보세요.", type: "textarea" },
   ],
   p1: [
-    { name: "hypothesis.action", label: "Action: 무엇을 바꾸나요?", help: "바꾸는 것은 한 가지로 좁혀요.", type: "textarea" },
-    { name: "hypothesis.behavior", label: "Behavior: 사용자 행동이 어떻게 달라지나요?", help: "왜 효과가 날지 메커니즘을 적어요.", type: "textarea" },
-    { name: "hypothesis.impact", label: "Impact: 어떤 지표가 어느 방향으로 움직이나요?", help: "측정할 지표와 방향을 함께 적어요.", type: "textarea" },
+    { name: "hypothesis.action", label: "대상과 Treatment: 누구에게 무엇을 적용하나요?", help: "[대상]에게 [Treatment]를 적용하면… 의 앞부분이에요. 바꾸는 것은 한 가지로 좁혀요.", type: "textarea" },
+    { name: "hypothesis.behavior", label: "이유: 그래서 사용자 행동이 어떻게 달라지나요?", help: "왜 효과가 날지 메커니즘을 적어요.", type: "textarea" },
+    { name: "hypothesis.impact", label: "Metric·방향·변화 크기: 어떤 지표가 얼마나 움직이나요?", help: "측정할 지표와 방향을 함께 적어요.", type: "textarea" },
     ...rule("V1", "변이안 1(V1)"),
     ...rule("V2", "변이안 2(V2)"),
     {

@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 const hypothesis = z.object({
-  action: z.string().trim().min(1, "Action 을 적어주세요"),
-  behavior: z.string().trim().min(1, "Behavior 를 적어주세요"),
-  impact: z.string().trim().min(1, "Impact 를 적어주세요"),
+  action: z.string().trim().min(1, "대상과 Treatment 를 적어주세요"),
+  behavior: z.string().trim().min(1, "이유(사용자 행동 변화)를 적어주세요"),
+  impact: z.string().trim().min(1, "Metric·방향·변화 크기를 적어주세요"),
 });
 
 const metricDef = z.enum(["started", "submitted", "submitted_72h"], "지표 정의를 골라주세요");
