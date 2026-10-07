@@ -47,7 +47,7 @@ export type ShareReviewInput = {
 
 export const inputHash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex");
 
-const COMMON = "수치는 입력(sim)에 있는 것만 인용하고 지어내지 마세요. 원문 문장을 길게 인용하지 마세요. 루브릭과 달라도 논리가 타당하면 인정하세요. 모든 문장은 한국어 해요체로 쓰세요. 반드시 JSON 객체 하나만 출력하세요.";
+const COMMON = "수치는 입력(sim)에 있는 것만 인용하고 지어내지 마세요. 원문 문장을 길게 인용하지 마세요. 루브릭과 달라도 논리가 타당하면 인정하세요. 모든 문장은 한국어 해요체로 쓰세요. 반드시 JSON 객체 하나만 출력하세요. 용어는 이론 수업과 같게 쓰세요: Primary 지표, Secondary·Driver 지표, Guardrail 지표, 실험 단위(Randomization Unit), 비열등성 검정, 트리거 분석.";
 
 export function teamPrompt(input: TeamReviewInput) {
   const system = [

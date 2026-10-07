@@ -4,7 +4,7 @@ import { simulateBaemin } from "@/lib/cases/baemin";
 import { ALL_FLAGS, FLAG_LABELS } from "@/lib/sim/core/flags";
 import { generateJson } from "../generate";
 import type { ReviewLLM } from "../llm";
-import { FLAG_NUDGES, leaksFlag, mockClassReview, mockTeamReview, scrubTeamReview, summarizeSim } from "../prompts";
+import { FLAG_NUDGES, leaksFlag, mockClassReview, mockTeamReview, scrubTeamReview, sharePrompt, summarizeSim, teamPrompt } from "../prompts";
 import { COOLDOWN_MS, ReviewError, readShare, reviewClass, reviewShare, reviewTeam } from "../service";
 import { classReviewSchema, teamReviewSchema } from "../types";
 
@@ -234,5 +234,14 @@ describe("reviewShare / readShare (직소 브리핑)", () => {
     const shown = (await readShare(db, "c1", true)).result!.output;
     expect(shown.briefs[0].traps_we_hit.length).toBeGreaterThanOrEqual(out.briefs[0].traps_we_hit.length);
     expect((await readShare(fakeDb({ ...seed(), ai_reviews: [] }), "c1", false)).result).toBeNull();
+  });
+});
+
+describe("프롬프트 용어 (덱과 통일)", () => {
+  it("프롬프트가 덱 용어를 쓰라고 안내한다", () => {
+    const { system } = teamPrompt({ case: "c", step: "design", rubric: "r", submission: {}, sim: null, revealed: false });
+    expect(system).toContain("Primary");
+    expect(system).toContain("Guardrail");
+    expect(sharePrompt({ step: "design", teams: [] }).system).toContain("Primary");
   });
 });
