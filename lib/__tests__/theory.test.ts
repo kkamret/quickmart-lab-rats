@@ -43,4 +43,12 @@ describe("이론 연결 매핑", () => {
     for (const c of CASE_KEYS) for (const list of Object.values(getClientCase(c)!.formMeta)) for (const f of list) names.add(f.name);
     for (const k of Object.keys(FIELD_THEORY)) expect(names.has(k), k).toBe(true);
   });
+  it("모든 사례 meta.theory 가 비어 있지 않고 중복이 없다", () => {
+    for (const c of CASE_KEYS) {
+      const t = getClientCase(c)!.meta.theory;
+      expect(t.length, c).toBeGreaterThan(0);
+      expect(new Set(t).size, c).toBe(t.length);
+      for (const k of t) expect(THEORY[k], `${c}:${k}`).toBeDefined();
+    }
+  });
 });

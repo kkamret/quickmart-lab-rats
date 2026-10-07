@@ -108,7 +108,7 @@ export function TeamScreen({ code, teamId }: { code: string; teamId: string }) {
                   <>
                     <StepView key={active} client={clientCase} step={active} status={steps[active] ?? "locked"} adapter={adapter} />
                     <div className="mt-5"><TeamReviewCard key={`${active}-${cls.reveal_answers}`} code={code} teamId={teamId} step={active} /></div>
-                    {cls.reveal_answers && <div className="mt-5"><RevealCard key={active} code={code} teamId={teamId} step={active} /></div>}
+                    {cls.reveal_answers && <div className="mt-5"><RevealCard key={active} code={code} teamId={teamId} step={active} theory={active === "s6_final" ? clientCase.meta.theory : []} /></div>}
                   </>
                 )}
               </div>
