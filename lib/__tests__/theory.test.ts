@@ -48,6 +48,21 @@ describe("이론 연결 매핑", () => {
   });
 });
 
+describe("고아 개념 방지", () => {
+  it("모든 THEORY 키가 FIELD_THEORY·STEP_THEORY·사례 meta.theory 중 한 곳에서 쓰인다", () => {
+    const used = new Set<string>(Object.values(FIELD_THEORY));
+    for (const ks of Object.values(STEP_THEORY)) for (const k of ks!) used.add(k);
+    for (const c of CASE_KEYS) for (const k of getClientCase(c)!.meta.theory) used.add(k);
+    for (const k of Object.keys(THEORY)) expect(used.has(k), k).toBe(true);
+  });
+  it("함정 개념(간섭 등)은 s7_lab 밖의 스텝 이론 줄에 들어가지 않는다", () => {
+    for (const [s, ks] of Object.entries(STEP_THEORY)) {
+      if (s === "s7_lab") continue;
+      for (const k of ks!) expect(["interference", "interference_fix", "peeking", "srm", "simpson"], `${s}:${k}`).not.toContain(k);
+    }
+  });
+});
+
 describe("정답 공개 전 함정 이름 숨김", () => {
   it("theoryChapterOnly 는 챕터만 보여 준다", () => {
     expect(theoryChapterOnly("analysis_unit")).toBe("Ch3");
