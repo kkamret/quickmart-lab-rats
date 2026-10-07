@@ -93,7 +93,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
   ],
   p3: [
     {
-      name: "randomization_unit", label: "배정 단위", type: "select",
+      name: "randomization_unit", label: "실험 단위 (Randomization Unit)", type: "select",
       options: [
         { value: "user", label: "사용자", desc: "같은 동네 사람들이 서로 다른 그룹에 섞여요." },
         { value: "neighborhood", label: "동네(클러스터)", desc: "동네 전체를 한 그룹으로 묶어요. 6,500개 동네가 단위예요." },

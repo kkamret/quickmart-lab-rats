@@ -33,7 +33,7 @@ const common: FieldMeta[] = [
     ],
   },
   {
-    name: "unit", label: "실험 단위", help: "무엇 단위로 A/B 를 나누나요?", type: "select",
+    name: "unit", label: "실험 단위 (Randomization Unit)", help: "무엇 단위로 무작위 배정하나요?", type: "select",
     options: [
       { value: "user", label: "사용자", desc: "같은 사람은 항상 같은 그룹이에요." },
       { value: "session", label: "세션", desc: "같은 사람이 세션마다 다른 그룹을 볼 수 있어요." },

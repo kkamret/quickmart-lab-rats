@@ -32,7 +32,7 @@ const PRIMARY_OPTIONS: FieldOption[] = [
 ];
 const HYPOTHESIS_TYPE: FieldOption[] = [
   { value: "superiority", label: "우월성", desc: "더 좋아졌는지 확인해요." },
-  { value: "non_inferiority", label: "비열등성", desc: "허용하는 손실보다 나빠지지 않았는지 확인해요." },
+  { value: "non_inferiority", label: "비열등성 검정", desc: "허용하는 손실보다 나빠지지 않았는지 확인해요." },
 ];
 
 export const formMeta: Record<string, FieldMeta[]> = {
@@ -92,7 +92,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
       ],
     },
     {
-      name: "ctr_analysis_unit", label: "CTR 분석 단위", help: "무엇을 한 건으로 셀까요?", type: "select",
+      name: "ctr_analysis_unit", label: "CTR 분석 단위 (Analysis Unit)", help: "무엇을 한 건으로 셀까요?", type: "select",
       options: [
         { value: "push", label: "푸시 한 건", desc: "발송된 푸시 수를 표본 크기로 봐요." },
         { value: "user_delta", label: "사용자 단위(Delta Method)", desc: "사용자를 표본 단위로 두고 비율의 오차를 계산해요." },
