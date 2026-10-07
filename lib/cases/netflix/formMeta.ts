@@ -33,6 +33,10 @@ export const formMeta: Record<string, FieldMeta[]> = {
   ],
   p1: [
     {
+      name: "hypothesis", label: "가설 한 문장 (선택)", type: "textarea",
+      help: "[대상]에게 [Treatment]를 적용하면, [이유] 때문에 [Metric]이 [방향]으로 변할 것이다. 예: 오프라인 1위 랭커를 그대로 쓰는 대신 온라인에서 걸러 내면, …",
+    },
+    {
       name: "method", label: "스크리닝 방식", help: "후보 8개를 어떻게 걸러낼까요?", type: "select",
       options: [
         { value: "abn_all", label: "전부 A/B/n", desc: "후보마다 그룹을 만들어 현행과 비교해요." },
@@ -40,7 +44,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
       ],
     },
     { name: "candidates", label: "스크리닝할 후보", type: "multiselect", options: CANDIDATES },
-    { name: "abn_primary", label: "[A/B/n] 메인 지표", help: "A/B/n 을 고른 경우에만 써요.", type: "select", options: [{ value: "hours", label: "주간 시청 시간" }, { value: "retention", label: "28일 리텐션" }] },
+    { name: "abn_primary", label: "[A/B/n] Primary 지표", help: "A/B/n 을 고른 경우에만 써요.", type: "select", options: [{ value: "hours", label: "주간 시청 시간" }, { value: "retention", label: "28일 리텐션" }] },
     { name: "abn_fraction", label: "[A/B/n] 실험에 쓸 멤버 비율", help: "전체 멤버 중 몇 %를 쓰는지(0.01~0.20)", type: "number", min: 0.01, max: 0.2, step: 0.01 },
     { name: "abn_weeks", label: "[A/B/n] 기간", type: "number", min: 1, max: 8, step: 1, unit: "주" },
     {
@@ -64,7 +68,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
     { name: "fraction", label: "실험에 쓸 멤버 비율", help: "전체 멤버 중 몇 %를 쓰는지(0.01~0.20). 그룹 수로 똑같이 나눠요.", type: "number", min: 0.01, max: 0.2, step: 0.01 },
     { name: "weeks", label: "기간", type: "number", min: 1, max: 8, step: 1, unit: "주" },
     {
-      name: "primary", label: "메인 지표", type: "select",
+      name: "primary", label: "Primary 지표", help: "실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요.", type: "select",
       options: [
         { value: "hours", label: "주간 시청 시간" },
         { value: "retention", label: "28일 리텐션", desc: "습관 형성에 시간이 걸려요." },
@@ -72,7 +76,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
       ],
     },
     {
-      name: "hours_treatment", label: "시청 시간 처리", help: "메인 지표가 시청 시간일 때 적용돼요. 꼬리가 긴 분포예요.", type: "select",
+      name: "hours_treatment", label: "시청 시간 처리", help: "Primary 지표가 시청 시간일 때 적용돼요. 꼬리가 긴 분포예요.", type: "select",
       options: [
         { value: "raw", label: "원시 평균" },
         { value: "winsorize_p99", label: "윈저라이징(상위 1% 상한)" },

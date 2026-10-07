@@ -12,7 +12,7 @@ export const decisions: Record<string, { options: DecisionOption[] }> = {
     options: [
       { id: "full_deploy", label: "전면 배포", desc: "모든 화면과 OS 에 배포해요." },
       { id: "no_deploy", label: "배포 안 함", desc: "배포하지 않아요." },
-      { id: "deploy_followup", label: "배포 + 보조 지표 발견으로 후속 실험", desc: "배포하고, 보조 지표에서 찾은 가설을 다음 실험으로 이어가요." },
+      { id: "deploy_followup", label: "배포 + Secondary·Driver 지표 발견으로 후속 실험", desc: "배포하고, Secondary·Driver 지표에서 찾은 가설을 다음 실험으로 이어가요." },
     ],
   },
   p3: {

@@ -3,6 +3,7 @@ import type { ZodType } from "zod";
 import type { CaseKey } from "../cases";
 import type { StepKey } from "../steps";
 import type { Readout } from "../sim/core/readout";
+import type { TheoryKey } from "../theory";
 
 export type PhaseKind = "diagnose" | "design" | "run" | "readout" | "decide";
 
@@ -43,6 +44,8 @@ export interface CasePlugin<D = unknown> {
     sourceTitle: string;
     difficulty: 1 | 2 | 3 | 4;
     concepts: string[];
+    /** 이 사례에서 쓰는 이론 개념 (정답 공개 때 "오늘 쓴 개념 ↔ 덱" 표에 쓴다) */
+    theory: TheoryKey[];
   };
   phases: PhaseDef[];
   designSchema: Record<string, ZodType>;

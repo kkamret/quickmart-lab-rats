@@ -7,7 +7,7 @@ import { TimeSeries, type Series } from "./TimeSeries";
 import { fmtInt, type ArmLabels } from "./format";
 
 /**
- * 공통 Readout 화면. 읽는 순서는 고정: 데이터 품질(SRM) → 메인 → 가드레일 → 보조 → 사례 전용 패널.
+ * 공통 Readout 화면. 읽는 순서는 고정: 데이터 품질(SRM) → Primary → Guardrail → Secondary·Driver → 사례 전용 패널.
  * 사례 전용 패널·시계열·그룹 이름은 props 로 받는다(공통 컴포넌트에 사례 로직이 새지 않게).
  */
 export function ReadoutView({

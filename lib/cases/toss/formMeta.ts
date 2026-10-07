@@ -32,7 +32,7 @@ const PRIMARY_OPTIONS: FieldOption[] = [
 ];
 const HYPOTHESIS_TYPE: FieldOption[] = [
   { value: "superiority", label: "우월성", desc: "더 좋아졌는지 확인해요." },
-  { value: "non_inferiority", label: "비열등성", desc: "허용하는 손실보다 나빠지지 않았는지 확인해요." },
+  { value: "non_inferiority", label: "비열등성 검정", desc: "허용하는 손실보다 나빠지지 않았는지 확인해요." },
 ];
 
 export const formMeta: Record<string, FieldMeta[]> = {
@@ -56,9 +56,9 @@ export const formMeta: Record<string, FieldMeta[]> = {
     { name: "rationale", label: "그렇게 생각한 이유", help: "CTR 이 오르는 게 사람들이 더 눌러서인지, 덜 보내서인지도 생각해보세요.", type: "textarea" },
   ],
   p1: [
-    { name: "hypothesis.action", label: "Action: 무엇을 바꾸나요?", help: "바꾸는 것은 한 가지로 좁혀요.", type: "textarea" },
-    { name: "hypothesis.behavior", label: "Behavior: 사용자 행동이 어떻게 달라지나요?", help: "왜 효과가 날지 메커니즘을 적어요.", type: "textarea" },
-    { name: "hypothesis.impact", label: "Impact: 어떤 지표가 어느 방향으로 움직이나요?", help: "측정할 지표와 방향을 함께 적어요.", type: "textarea" },
+    { name: "hypothesis.action", label: "대상과 Treatment: 누구에게 무엇을 적용하나요?", help: "[대상]에게 [Treatment]를 적용하면… 의 앞부분이에요. 바꾸는 것은 한 가지로 좁혀요.", type: "textarea" },
+    { name: "hypothesis.behavior", label: "이유: 그래서 사용자 행동이 어떻게 달라지나요?", help: "왜 효과가 날지 메커니즘을 적어요.", type: "textarea" },
+    { name: "hypothesis.impact", label: "Metric·방향·변화 크기: 어떤 지표가 얼마나 움직이나요?", help: "측정할 지표와 방향을 함께 적어요.", type: "textarea" },
     ...rule("V1", "변이안 1(V1)"),
     ...rule("V2", "변이안 2(V2)"),
     {
@@ -66,22 +66,13 @@ export const formMeta: Record<string, FieldMeta[]> = {
       type: "number", min: 0.01, max: 0.2, step: 0.01,
     },
     { name: "duration_weeks", label: "실험 기간", help: "2주~12주", type: "number", min: 2, max: 12, step: 1, unit: "주" },
-    { name: "primary", label: "메인 지표", help: "실험의 성패를 가르는 지표 한 개", type: "select", options: PRIMARY_OPTIONS },
+    { name: "primary", label: "Primary 지표", help: "실험의 성패를 가르는 지표 한 개. 실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요.", type: "select", options: PRIMARY_OPTIONS },
     { name: "hypothesis_type.push_ctr", label: "푸시 CTR 의 가설 유형", type: "select", options: HYPOTHESIS_TYPE },
     { name: "hypothesis_type.clicks_per_user", label: "인당 클릭 수의 가설 유형", type: "select", options: HYPOTHESIS_TYPE },
     { name: "hypothesis_type.app_open_au", label: "앱 오픈 AU 의 가설 유형", type: "select", options: HYPOTHESIS_TYPE },
     { name: "ni_margin_pct", label: "비열등성 마진", help: "비열등성을 쓴 지표에서 허용하는 손실이에요. 예: −1 은 대조군보다 1% 까지 줄어도 괜찮다는 뜻이에요.", type: "number", min: -10, max: 0, step: 0.5, unit: "%" },
     {
-      name: "guardrails", label: "가드레일 지표", help: "나빠지면 안 되는 지표", type: "multiselect",
-      options: [
-        { value: "app_open_au", label: "앱 오픈 AU" },
-        { value: "service_au", label: "서비스별 AU (12개 서비스)", desc: "서비스마다 대조군과 비교해요." },
-        { value: "revenue_per_user", label: "인당 주간 매출" },
-        { value: "opt_out_rate", label: "알림 수신 거부율" },
-      ],
-    },
-    {
-      name: "secondary", label: "보조 지표", help: "해석을 돕는 지표", type: "multiselect",
+      name: "secondary", label: "Secondary·Driver 지표", help: "해석을 돕는 지표", type: "multiselect",
       options: [
         { value: "push_ctr", label: "푸시 CTR" },
         { value: "clicks_per_user", label: "인당 주간 클릭 수" },
@@ -92,7 +83,16 @@ export const formMeta: Record<string, FieldMeta[]> = {
       ],
     },
     {
-      name: "ctr_analysis_unit", label: "CTR 분석 단위", help: "무엇을 한 건으로 셀까요?", type: "select",
+      name: "guardrails", label: "Guardrail 지표", help: "나빠지면 안 되는 지표", type: "multiselect",
+      options: [
+        { value: "app_open_au", label: "앱 오픈 AU" },
+        { value: "service_au", label: "서비스별 AU (12개 서비스)", desc: "서비스마다 대조군과 비교해요." },
+        { value: "revenue_per_user", label: "인당 주간 매출" },
+        { value: "opt_out_rate", label: "알림 수신 거부율" },
+      ],
+    },
+    {
+      name: "ctr_analysis_unit", label: "CTR 분석 단위 (Analysis Unit)", help: "무엇을 한 건으로 셀까요?", type: "select",
       options: [
         { value: "push", label: "푸시 한 건", desc: "발송된 푸시 수를 표본 크기로 봐요." },
         { value: "user_delta", label: "사용자 단위(Delta Method)", desc: "사용자를 표본 단위로 두고 비율의 오차를 계산해요." },
@@ -111,7 +111,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
         { value: "sequential", label: "순차 검정(경계를 넘으면 종료)" },
       ],
     },
-    { name: "stakeholder_alignment", label: "서비스 담당자에게 목적·가드레일·리스크를 사전에 공유했나요?", type: "boolean" },
+    { name: "stakeholder_alignment", label: "서비스 담당자에게 목적·Guardrail·리스크를 사전에 공유했나요?", type: "boolean" },
   ],
   p2: [
     {

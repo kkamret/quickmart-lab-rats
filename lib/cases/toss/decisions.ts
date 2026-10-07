@@ -3,7 +3,7 @@ import type { DecisionDef } from "../types";
 export const decisions: Record<string, DecisionDef> = {
   p1: {
     options: [
-      { id: "expand", label: "30% 확대", desc: "표본을 넓히고 기간을 늘려 가드레일과 장기 효과를 확인해요." },
+      { id: "expand", label: "30% 확대", desc: "표본을 넓히고 기간을 늘려 Guardrail과 장기 효과를 확인해요." },
       { id: "revise", label: "변이안 수정 후 재실험", desc: "규칙(N·W·C·G)을 고쳐서 6% 에서 다시 확인해요." },
       { id: "stop", label: "중단", desc: "이번 결과로는 더 진행하지 않아요." },
     ],
@@ -18,7 +18,7 @@ export const decisions: Record<string, DecisionDef> = {
       { id: "dynamic_next", label: "V2 우선 배포 + 동적 N 후속 실험", desc: "보수안을 먼저 배포하고, 유저·서비스별로 N 을 조정하는 안을 다음 실험으로 이어가요." },
     ],
     fields: [
-      { name: "stakeholder_notice", label: "서비스 담당자 공지 초안", help: "배포 목적, 지킨 가드레일, 남은 리스크를 담당자 눈높이에서 적어요." },
+      { name: "stakeholder_notice", label: "서비스 담당자 공지 초안", help: "배포 목적, 지킨 Guardrail, 남은 리스크를 담당자 눈높이에서 적어요." },
       { name: "monitoring_plan", label: "배포 후 모니터링 계획", help: "배포 후 볼 지표와 홀드아웃 계획을 적어요." },
     ],
   },

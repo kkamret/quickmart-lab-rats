@@ -5,7 +5,7 @@ import { ARM_LABEL, ROLE_LABEL, type ArmLabels, fmtDiff, fmtP, fmtRel, fmtValue 
 
 const ROLE_ORDER = { P: 0, G: 1, S: 2 } as const;
 
-/** 지표 표: 메인 → 가드레일 → 보조 순. 처치군마다 대조군(A) 대비 차이·신뢰구간·p 값을 보여준다. */
+/** 지표 표: Primary → Guardrail → Secondary·Driver 순. 처치군마다 대조군(A) 대비 차이·신뢰구간·p 값을 보여준다. */
 export function MetricTable({ metrics, armLabels = {} }: { metrics: MetricResult[]; armLabels?: ArmLabels }) {
   const label = (a: string) => armLabels[a] ?? ARM_LABEL[a];
   const sorted = [...metrics].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);

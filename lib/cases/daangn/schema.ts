@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 const hypothesis = z.object({
-  action: z.string().trim().min(1, "Action 을 적어주세요"),
-  behavior: z.string().trim().min(1, "Behavior 를 적어주세요"),
-  impact: z.string().trim().min(1, "Impact 를 적어주세요"),
+  action: z.string().trim().min(1, "대상과 Treatment 를 적어주세요"),
+  behavior: z.string().trim().min(1, "이유(사용자 행동 변화)를 적어주세요"),
+  impact: z.string().trim().min(1, "Metric·방향·변화 크기를 적어주세요"),
 });
 
 const metricDef = z.enum(["started", "submitted", "submitted_72h"], "지표 정의를 골라주세요");
@@ -71,7 +71,7 @@ export const p2Schema = z.object({
 export const p3Schema = z.object({
   phase: z.literal("p3"),
   randomization_unit: z.enum(["user", "neighborhood"], "배정 단위를 골라주세요"),
-  primary: z.enum(["listing_creation_rate", "sell_through_7d"], "메인 지표를 골라주세요"),
+  primary: z.enum(["listing_creation_rate", "sell_through_7d"], "Primary 지표를 골라주세요"),
   guardrails: z.array(z.enum(["search_to_chat", "search_retry"])),
   analysis_se: z.enum(["naive", "cluster_robust"], "표준오차 계산 방식을 골라주세요"),
   duration_days: z.number().int().min(7, "7일 미만은 입력할 수 없어요").max(42, "42일 이하로 해주세요"),

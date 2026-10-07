@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { NEUTRAL_BADGE_TITLE, STEP_THEORY, TITLED_STEPS, theoryBadge, theoryLabel, theoryChapterOnly, wikiHref, type TheoryKey } from "@/lib/theory";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-2xl border border-line bg-surface p-5 ${className}`}>{children}</div>;
@@ -48,4 +49,34 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function ErrorText({ children }: { children: ReactNode }) {
   return children ? <p role="alert" className="mt-2 text-sm text-neg">{children}</p> : null;
+}
+
+/** 입력란·경고 옆 회색 소형 배지: "Ch2" */
+export function TheoryBadge({ k, reveal = false }: { k: TheoryKey; reveal?: boolean }) {
+  return <span title={reveal ? theoryLabel(k) : NEUTRAL_BADGE_TITLE} className="ml-1.5 rounded bg-sunk px-1.5 py-0.5 align-middle text-[10px] font-medium text-ink3">{theoryBadge(k)}</span>;
+}
+
+/** 스텝 상단 한 줄: "이론 복습: Ch2 · 가설 문장 구조 · …". 위키가 있으면 링크. */
+export function TheoryNote({ step }: { step: string }) {
+  const keys = STEP_THEORY[step];
+  if (!keys?.length) return null;
+  const titled = TITLED_STEPS.has(step);
+  // 개념 이름을 숨기는 스텝은 챕터만 중복 없이 보여 준다
+  const chapters = [...new Set(keys.map(theoryChapterOnly))];
+  return (
+    <p className="rounded-lg bg-sunk px-3 py-2 text-xs text-ink2">
+      <strong className="mr-1.5">이론 복습</strong>
+      {titled
+        ? keys.map((k, i) => {
+            const href = wikiHref(k);
+            return (
+              <span key={k}>
+                {i > 0 && " · "}
+                {href ? <a href={href} target="_blank" rel="noreferrer" className="underline">{theoryLabel(k)}</a> : theoryLabel(k)}
+              </span>
+            );
+          })
+        : chapters.join(" · ")}
+    </p>
+  );
 }

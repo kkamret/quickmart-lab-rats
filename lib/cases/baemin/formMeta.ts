@@ -15,9 +15,9 @@ const METRIC_OPTIONS: FieldOption[] = [
 ];
 
 const common: FieldMeta[] = [
-  { name: "hypothesis.action", label: "Action: 무엇을 바꾸나요?", help: "바꾸는 것은 한 가지로 좁혀요.", type: "textarea" },
-  { name: "hypothesis.behavior", label: "Behavior: 사용자 행동이 어떻게 달라지나요?", help: "왜 효과가 날지 메커니즘을 적어요.", type: "textarea" },
-  { name: "hypothesis.impact", label: "Impact: 어떤 지표가 어느 방향으로 움직이나요?", help: "측정할 지표와 방향을 함께 적어요.", type: "textarea" },
+  { name: "hypothesis.action", label: "대상과 Treatment: 누구에게 무엇을 적용하나요?", help: "[대상]에게 [Treatment]를 적용하면… 의 앞부분이에요. 바꾸는 것은 한 가지로 좁혀요.", type: "textarea" },
+  { name: "hypothesis.behavior", label: "이유: 그래서 사용자 행동이 어떻게 달라지나요?", help: "왜 효과가 날지 메커니즘을 적어요.", type: "textarea" },
+  { name: "hypothesis.impact", label: "Metric·방향·변화 크기: 어떤 지표가 얼마나 움직이나요?", help: "측정할 지표와 방향을 함께 적어요.", type: "textarea" },
   {
     name: "scope.os", label: "OS 범위", type: "select",
     options: [
@@ -33,16 +33,16 @@ const common: FieldMeta[] = [
     ],
   },
   {
-    name: "unit", label: "실험 단위", help: "무엇 단위로 A/B 를 나누나요?", type: "select",
+    name: "unit", label: "실험 단위 (Randomization Unit)", help: "무엇 단위로 무작위 배정하나요?", type: "select",
     options: [
       { value: "user", label: "사용자", desc: "같은 사람은 항상 같은 그룹이에요." },
       { value: "session", label: "세션", desc: "같은 사람이 세션마다 다른 그룹을 볼 수 있어요." },
       { value: "pageview", label: "페이지뷰", desc: "화면을 열 때마다 그룹이 바뀔 수 있어요." },
     ],
   },
-  { name: "metrics.primary", label: "메인 지표", help: "실험의 성패를 가르는 지표 한 개", type: "select", options: METRIC_OPTIONS },
-  { name: "metrics.guardrails", label: "가드레일 지표", help: "나빠지면 안 되는 지표", type: "multiselect", options: METRIC_OPTIONS },
-  { name: "metrics.secondary", label: "보조 지표", help: "다음 가설을 찾는 데 쓰는 지표", type: "multiselect", options: METRIC_OPTIONS },
+  { name: "metrics.primary", label: "Primary 지표", help: "실험의 성패를 가르는 지표 한 개. 실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요.", type: "select", options: METRIC_OPTIONS },
+  { name: "metrics.secondary", label: "Secondary·Driver 지표", help: "다음 가설을 찾는 데 쓰는 지표", type: "multiselect", options: METRIC_OPTIONS },
+  { name: "metrics.guardrails", label: "Guardrail 지표", help: "나빠지면 안 되는 지표", type: "multiselect", options: METRIC_OPTIONS },
   {
     name: "alpha", label: "유의수준(α)", type: "select",
     options: [{ value: 0.01, label: "1%" }, { value: 0.05, label: "5%" }, { value: 0.1, label: "10%" }],

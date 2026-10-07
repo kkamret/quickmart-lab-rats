@@ -1,4 +1,5 @@
 /** 클라이언트로 보내도 되는 토스 사례 정의 (시뮬 엔진·루브릭·정답 해설·진짜 효과는 포함하지 않는다) */
+import type { TheoryKey } from "../../theory";
 import type { ClientCase, PhaseDef } from "../types";
 import { decisions } from "./decisions";
 import { defaultDesign } from "./defaults";
@@ -26,6 +27,7 @@ export const tossMeta = {
     "관찰 데이터의 교란", "오프라인 시뮬레이션 vs 온라인 실험", "A/B/n(ABC)", "처치가 분모를 바꾸는 비율 지표", "Delta Method",
     "비열등성 검정", "CUPED", "장기 효과(습관 침식)", "다중검정", "Ramp-up", "이질적 처치 효과(HTE)", "리스크 기반 배포안 선택", "이해관계자 합의",
   ],
+  theory: ["hypothesis", "non_inferiority", "metric_layers", "analysis_unit", "cuped", "multiple_testing", "novelty", "predefine"] as TheoryKey[],
 };
 
 export const tossClient: ClientCase = {

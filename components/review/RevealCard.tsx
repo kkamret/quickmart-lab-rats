@@ -2,10 +2,11 @@
 import { useEffect, useState } from "react";
 import type { RevealPayload } from "@/lib/reveal";
 import type { StepKey } from "@/lib/steps";
+import { theoryLabel, type TheoryKey } from "@/lib/theory";
 import { Badge, Card, ErrorText } from "../ui";
 
 /** 정답 공개 카드: 강사가 공개를 켠 뒤에만 보인다. 원문 비교 해설과, 이 조의 시뮬레이션이 심어 둔 함정을 알려준다. */
-export function RevealCard({ code, teamId, step }: { code: string; teamId: string; step: StepKey }) {
+export function RevealCard({ code, teamId, step, theory }: { code: string; teamId: string; step: StepKey; theory: TheoryKey[] }) {
   const [data, setData] = useState<RevealPayload | null>(null);
   const [err, setErr] = useState("");
 
@@ -46,6 +47,14 @@ export function RevealCard({ code, teamId, step }: { code: string; teamId: strin
           <p className="mt-1 text-sm text-ink2">{i.text}</p>
         </div>
       ))}
+      {theory.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold">오늘 쓴 개념 ↔ 이론 챕터</h3>
+          <ul className="mt-1 space-y-0.5 text-sm text-ink2">
+            {theory.map((k) => <li key={k}>{theoryLabel(k)}</li>)}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }

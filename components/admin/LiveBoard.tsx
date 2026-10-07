@@ -155,7 +155,7 @@ function ComparisonTable({ comp }: { comp: BoardComparison }) {
             <tr className="border-b border-line text-left text-xs text-ink3">
               <th className="py-2 pr-3">조</th>
               {keys.map((k) => <th key={k} className="px-2">{k}</th>)}
-              <th className="px-2">메인 지표 차이 (95% CI)</th>
+              <th className="px-2">Primary 지표 차이 (95% CI)</th>
               <th className="px-2">p</th>
               <th className="px-2">달성 검정력</th>
               <th className="px-2">SRM p</th>

@@ -1,7 +1,8 @@
 "use client";
 import type { FieldMeta, FieldOption } from "@/lib/cases/types";
 import { getPath, setPath } from "@/lib/lab/path";
-import { inputClass } from "../ui";
+import { FIELD_THEORY } from "@/lib/theory";
+import { inputClass, TheoryBadge } from "../ui";
 
 type Obj = Record<string, unknown>;
 
@@ -24,7 +25,10 @@ function Field({ f, v, set, disabled }: { f: FieldMeta; v: unknown; set: (v: unk
   const id = `f-${f.name}`;
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-semibold">{f.label}</label>
+      <label htmlFor={id} className="mb-1 block text-sm font-semibold">
+        {f.label}
+        {FIELD_THEORY[f.name] && <TheoryBadge k={FIELD_THEORY[f.name]} />}
+      </label>
       {f.help && <p className="mb-1.5 text-xs text-ink3">{f.help}</p>}
       <Control id={id} f={f} v={v} set={set} disabled={disabled} />
     </div>

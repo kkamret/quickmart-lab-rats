@@ -47,7 +47,7 @@ export type ShareReviewInput = {
 
 export const inputHash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex");
 
-const COMMON = "수치는 입력(sim)에 있는 것만 인용하고 지어내지 마세요. 원문 문장을 길게 인용하지 마세요. 루브릭과 달라도 논리가 타당하면 인정하세요. 모든 문장은 한국어 해요체로 쓰세요. 반드시 JSON 객체 하나만 출력하세요.";
+const COMMON = "수치는 입력(sim)에 있는 것만 인용하고 지어내지 마세요. 원문 문장을 길게 인용하지 마세요. 루브릭과 달라도 논리가 타당하면 인정하세요. 모든 문장은 한국어 해요체로 쓰세요. 반드시 JSON 객체 하나만 출력하세요. 용어는 이론 수업과 같게 쓰세요: Primary 지표, Secondary·Driver 지표, Guardrail 지표, 실험 단위(Randomization Unit), 비열등성 검정, 트리거 분석.";
 
 export function teamPrompt(input: TeamReviewInput) {
   const system = [
@@ -84,7 +84,7 @@ export const FLAG_NUDGES: Partial<Record<Flag, string>> = {
   NAIVE_SE: "같은 사용자의 여러 관측을 독립이라고 가정해도 될까요?",
   NOVELTY: "처음 본 사용자의 반응과 익숙해진 뒤의 반응이 같을까요?",
   CONTAMINATION: "두 그룹이 서로 영향을 주고받을 수는 없었을까요?",
-  STAKEHOLDER_EVENT: "실험을 시작하기 전에 영향을 받는 담당자들과 목적·가드레일·리스크를 함께 이야기했나요?",
+  STAKEHOLDER_EVENT: "실험을 시작하기 전에 영향을 받는 담당자들과 목적·Guardrail·리스크를 함께 이야기했나요?",
   GOODHART: "이 지표를 올리는 것이 정말 우리가 원하던 결과와 같은 방향일까요?",
 };
 

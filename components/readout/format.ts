@@ -45,7 +45,7 @@ export function fmtP(p: number): string {
   return p.toFixed(3);
 }
 
-export const ROLE_LABEL = { P: "메인", G: "가드레일", S: "보조" } as const;
+export const ROLE_LABEL = { P: "Primary", G: "Guardrail", S: "Secondary·Driver" } as const;
 export const ARM_LABEL: Record<string, string> = { A: "A (대조군)", B: "B", C: "C", D: "D" };
 /** 사례가 그룹 이름을 따로 쓰면(예: V1·V2) 이 표로 덮어쓴다 */
 export type ArmLabels = Partial<Record<string, string>>;

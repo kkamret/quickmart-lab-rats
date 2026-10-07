@@ -14,6 +14,7 @@ const correction = z.enum(["none", "bonferroni", "bh"], "다중검정 보정을 
 export const p1Schema = z
   .object({
     phase: z.literal("p1"),
+    hypothesis: z.string().trim().optional(),
     method: z.enum(["abn_all", "interleaving"], "스크리닝 방식을 골라주세요"),
     abn_primary: z.enum(["hours", "retention"]).optional(),
     abn_fraction: z.number().min(0.01, "1% 이상으로 해주세요").max(0.2, "20% 이하로 해주세요").optional(),
@@ -31,7 +32,7 @@ export const p1Schema = z
       if (!ok) ctx.addIssue({ code: "custom", path: [path], message });
     };
     if (d.method === "abn_all") {
-      need(d.abn_primary !== undefined, "abn_primary", "A/B/n 의 메인 지표를 골라주세요");
+      need(d.abn_primary !== undefined, "abn_primary", "A/B/n 의 Primary 지표를 골라주세요");
       need(d.abn_fraction !== undefined, "abn_fraction", "실험에 쓸 멤버 비율을 적어주세요");
       need(d.abn_weeks !== undefined, "abn_weeks", "기간(주)을 적어주세요");
     } else {
@@ -48,7 +49,7 @@ export const p2Schema = z.object({
   finalists: z.array(candidate).min(2, "결선 후보는 2~3개예요").max(3, "결선 후보는 2~3개예요"),
   fraction: z.number().min(0.01, "1% 이상으로 해주세요").max(0.2, "20% 이하로 해주세요"),
   weeks: z.number().int().min(1, "1주 이상으로 해주세요").max(8, "8주 이하로 해주세요"),
-  primary: z.enum(["hours", "retention", "surrogate_2ep"], "메인 지표를 골라주세요"),
+  primary: z.enum(["hours", "retention", "surrogate_2ep"], "Primary 지표를 골라주세요"),
   hours_treatment: z.enum(["raw", "winsorize_p99", "log"], "시청 시간 처리 방식을 골라주세요"),
   cuped: z.boolean("CUPED 사용 여부를 골라주세요"),
   correction,

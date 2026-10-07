@@ -58,10 +58,10 @@ describe("기본 설계와 폼 검증 메시지", () => {
     const r = baeminClient.designSchema.p1.safeParse(d);
     expect(r.success).toBe(false);
     const msgs = formatIssues(r.error!.issues, baeminClient.formMeta.p1);
-    expect(msgs.join("\n")).toContain("메인 지표");
+    expect(msgs.join("\n")).toContain("Primary 지표");
     expect(msgs.join("\n")).toContain("실험 단위");
     expect(msgs.join("\n")).toContain("중간 확인 규칙");
-    expect(msgs.join("\n")).toContain("Action");
+    expect(msgs.join("\n")).toContain("대상과 Treatment");
   });
   it("앞 Phase 설계를 이어받는다: P2 는 P1 의 메인 지표·가설을 유지하되 qa_old_ios=false 로 시작", () => {
     const p1 = { ...baeminClient.defaultDesign("p1"), metrics: { primary: "abandon", guardrails: ["conv"], secondary: [] }, unit: "user" };
