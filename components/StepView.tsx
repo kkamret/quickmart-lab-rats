@@ -8,7 +8,7 @@ import type { TeamReadout } from "@/lib/sim/core/readout";
 import { getCaseUi } from "./cases/registry";
 import { AutoForm } from "./form/AutoForm";
 import { ReadoutView } from "./readout/ReadoutView";
-import { Badge, Button, Card, ErrorText, inputClass } from "./ui";
+import { Badge, Button, Card, ErrorText, inputClass, TheoryNote } from "./ui";
 
 type Obj = Record<string, unknown>;
 type RunKey = string; // `${phaseKey}:${mode}`
@@ -40,6 +40,7 @@ export function StepView({ client, step, status, adapter }: { client: ClientCase
   const ctx: Ctx = { client, step, status, adapter, subs, reload, runs, setRun: (k, v) => setRuns((r) => ({ ...r, [k]: v })) };
   return (
     <div className="space-y-5">
+      <TheoryNote step={step} />
       {status === "locked" && adapter.mode === "remote" && (
         <p className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">강사님이 이 스텝을 열면 진행할 수 있어요.</p>
       )}

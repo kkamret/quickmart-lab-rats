@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { STEP_THEORY, theoryBadge, theoryLabel, wikiHref, type TheoryKey } from "@/lib/theory";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-2xl border border-line bg-surface p-5 ${className}`}>{children}</div>;
@@ -48,4 +49,29 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function ErrorText({ children }: { children: ReactNode }) {
   return children ? <p role="alert" className="mt-2 text-sm text-neg">{children}</p> : null;
+}
+
+/** 입력란·경고 옆 회색 소형 배지: "Ch2·17" */
+export function TheoryBadge({ k }: { k: TheoryKey }) {
+  return <span title={theoryLabel(k)} className="ml-1.5 rounded bg-sunk px-1.5 py-0.5 align-middle text-[10px] font-medium text-ink3">{theoryBadge(k)}</span>;
+}
+
+/** 스텝 상단 한 줄: "이론 복습: Ch2 · 가설 문장 구조 (덱 17장) · …". 위키가 있으면 링크. */
+export function TheoryNote({ step }: { step: string }) {
+  const keys = STEP_THEORY[step];
+  if (!keys?.length) return null;
+  return (
+    <p className="rounded-lg bg-sunk px-3 py-2 text-xs text-ink2">
+      <strong className="mr-1.5">이론 복습</strong>
+      {keys.map((k, i) => {
+        const href = wikiHref(k);
+        return (
+          <span key={k}>
+            {i > 0 && " · "}
+            {href ? <a href={href} target="_blank" rel="noreferrer" className="underline">{theoryLabel(k)}</a> : theoryLabel(k)}
+          </span>
+        );
+      })}
+    </p>
+  );
 }
