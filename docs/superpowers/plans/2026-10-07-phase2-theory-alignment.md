@@ -308,7 +308,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ### Task 4: 용어 정렬 — 가설 라벨
 
 **Files:**
-- Modify: `lib/cases/{baemin,toss,daangn}/formMeta.ts` (넷플릭스는 가설 입력란 없음)
+- Modify: `lib/cases/{baemin,toss,daangn}/formMeta.ts` (넷플릭스는 가설 입력란이 없어 Task 4b 에서 추가)
 - Modify: `lib/cases/{baemin,toss,daangn}/schema.ts` (오류 메시지)
 
 필드명(`hypothesis.action/behavior/impact`)과 zod 키는 그대로 둔다.
@@ -348,6 +348,84 @@ Expected: PASS. 옛 라벨을 단정하는 테스트(`lib/lab/__tests__/lab.test
 ```bash
 git add lib/cases
 git commit -m "feat(copy): 가설 입력란 라벨을 덱 17장 문장 구조로 정렬
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 4b: 넷플릭스 s2 스크리닝 설계에 가설 한 문장 (선택 입력)
+
+넷플릭스만 가설 입력란이 없어 모든 조가 가설을 한 번은 쓰도록 맞춘다. 기존 검증 시나리오가 그대로 통과하도록 **선택 입력**으로 추가한다. 시뮬레이션은 이 칸을 읽지 않는다.
+
+**Files:**
+- Modify: `lib/cases/netflix/schema.ts` (p1Schema)
+- Modify: `lib/cases/netflix/formMeta.ts` (p1 맨 앞)
+- Modify: `lib/theory.ts` (`FIELD_THEORY` 에 `hypothesis`)
+- Test: `lib/cases/netflix/__tests__/` 의 기존 스키마 테스트 파일 (없으면 `lib/cases/netflix/__tests__/hypothesis.test.ts` 새로 만든다)
+
+- [ ] **Step 1: 실패하는 테스트**
+
+`lib/cases/netflix/__tests__/hypothesis.test.ts`:
+
+```ts
+import { describe, expect, it } from "vitest";
+import { p1Schema } from "../schema";
+
+const base = {
+  phase: "p1", method: "interleaving", il_scheme: "team_draft", il_credit: "qualified_play_10min",
+  il_members_per_pair: 10000, il_days: 7, candidates: ["R2", "R3"], correction: "bh", advance_rule: "보정 후 유의",
+};
+
+describe("넷플릭스 p1 가설 한 문장", () => {
+  it("가설이 없어도 통과한다 (기존 설계 호환)", () => {
+    expect(p1Schema.safeParse(base).success).toBe(true);
+  });
+  it("가설을 적으면 공백을 다듬어 저장한다", () => {
+    const r = p1Schema.safeParse({ ...base, hypothesis: "  신규 랭커를 걸러 내면 시청 시간이 늘 것이다  " });
+    expect(r.success && r.data.hypothesis).toBe("신규 랭커를 걸러 내면 시청 시간이 늘 것이다");
+  });
+});
+```
+
+Run: `npx vitest run lib/cases/netflix/__tests__/hypothesis.test.ts`
+Expected: 두 번째 테스트 FAIL (`hypothesis` 가 zod 에서 제거돼 `undefined`)
+
+- [ ] **Step 2: 스키마**
+
+`lib/cases/netflix/schema.ts` 의 `p1Schema` 객체 `phase: z.literal("p1"),` 바로 아래에 추가:
+
+```ts
+    hypothesis: z.string().trim().optional(),
+```
+
+- [ ] **Step 3: 폼 입력란**
+
+`lib/cases/netflix/formMeta.ts` 의 `p1: [` 배열 첫 항목으로 추가:
+
+```ts
+    {
+      name: "hypothesis", label: "가설 한 문장 (선택)", type: "textarea",
+      help: "[대상]에게 [Treatment]를 적용하면, [이유] 때문에 [Metric]이 [방향]으로 변할 것이다. 예: 오프라인 1위 랭커를 그대로 쓰는 대신 온라인에서 걸러 내면, …",
+    },
+```
+
+`lib/theory.ts` 의 `FIELD_THEORY` 에 `hypothesis: "hypothesis",` 를 추가한다. 이 이름은 netflix `formMeta` 에 실제로 있으므로 Task 2 의 오타 테스트를 통과한다.
+
+- [ ] **Step 4: 검증**
+
+Run: `npx vitest run lib/cases/netflix lib/__tests__/theory.test.ts && npm test`
+Expected: PASS. 넷플릭스 검증 시나리오 12개가 그대로 통과해야 한다(`defaultDesign` 은 `hypothesis` 를 넣지 않는다).
+
+- [ ] **Step 5: 루브릭에 한 줄 (점수 로직 불변)**
+
+`lib/cases/netflix/rubric.ts` 의 p1 설계 항목 문자열 끝에 ` 가설 문장(선택)은 대상·Treatment·이유·Metric·방향이 한 문장에 있으면 가산하되, 비어 있어도 감점하지 않는다.` 를 붙인다.
+
+- [ ] **Step 6: 커밋**
+
+```bash
+git add lib/cases/netflix lib/theory.ts
+git commit -m "feat(netflix): s2 스크리닝 설계에 가설 한 문장(선택)
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
@@ -634,7 +712,7 @@ PR 은 사용자가 "푸시해줘/PR 올려줘" 라고 한 뒤에 만든다.
 
 | spec 항목 | task |
 |---|---|
-| 3.1 가설 라벨 | 4 |
+| 3.1 가설 라벨 | 4, 4b(넷플릭스 가설 칸 추가) |
 | 3.2 지표 용어·순서·OEC 도움말 | 5 |
 | 3.3 실험 단위 | 6 |
 | 3.4 그 밖의 라벨 | 6 (Step 2 점검) |
