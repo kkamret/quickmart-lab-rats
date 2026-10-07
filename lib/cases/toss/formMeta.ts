@@ -66,27 +66,27 @@ export const formMeta: Record<string, FieldMeta[]> = {
       type: "number", min: 0.01, max: 0.2, step: 0.01,
     },
     { name: "duration_weeks", label: "실험 기간", help: "2주~12주", type: "number", min: 2, max: 12, step: 1, unit: "주" },
-    { name: "primary", label: "메인 지표", help: "실험의 성패를 가르는 지표 한 개", type: "select", options: PRIMARY_OPTIONS },
+    { name: "primary", label: "Primary 지표", help: "실험의 성패를 가르는 지표 한 개. 실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요.", type: "select", options: PRIMARY_OPTIONS },
     { name: "hypothesis_type.push_ctr", label: "푸시 CTR 의 가설 유형", type: "select", options: HYPOTHESIS_TYPE },
     { name: "hypothesis_type.clicks_per_user", label: "인당 클릭 수의 가설 유형", type: "select", options: HYPOTHESIS_TYPE },
     { name: "hypothesis_type.app_open_au", label: "앱 오픈 AU 의 가설 유형", type: "select", options: HYPOTHESIS_TYPE },
     { name: "ni_margin_pct", label: "비열등성 마진", help: "비열등성을 쓴 지표에서 허용하는 손실이에요. 예: −1 은 대조군보다 1% 까지 줄어도 괜찮다는 뜻이에요.", type: "number", min: -10, max: 0, step: 0.5, unit: "%" },
     {
-      name: "guardrails", label: "가드레일 지표", help: "나빠지면 안 되는 지표", type: "multiselect",
-      options: [
-        { value: "app_open_au", label: "앱 오픈 AU" },
-        { value: "service_au", label: "서비스별 AU (12개 서비스)", desc: "서비스마다 대조군과 비교해요." },
-        { value: "revenue_per_user", label: "인당 주간 매출" },
-        { value: "opt_out_rate", label: "알림 수신 거부율" },
-      ],
-    },
-    {
-      name: "secondary", label: "보조 지표", help: "해석을 돕는 지표", type: "multiselect",
+      name: "secondary", label: "Secondary·Driver 지표", help: "해석을 돕는 지표", type: "multiselect",
       options: [
         { value: "push_ctr", label: "푸시 CTR" },
         { value: "clicks_per_user", label: "인당 주간 클릭 수" },
         { value: "sends_per_user", label: "인당 주간 발송 수" },
         { value: "app_open_au", label: "앱 오픈 AU" },
+        { value: "revenue_per_user", label: "인당 주간 매출" },
+        { value: "opt_out_rate", label: "알림 수신 거부율" },
+      ],
+    },
+    {
+      name: "guardrails", label: "Guardrail 지표", help: "나빠지면 안 되는 지표", type: "multiselect",
+      options: [
+        { value: "app_open_au", label: "앱 오픈 AU" },
+        { value: "service_au", label: "서비스별 AU (12개 서비스)", desc: "서비스마다 대조군과 비교해요." },
         { value: "revenue_per_user", label: "인당 주간 매출" },
         { value: "opt_out_rate", label: "알림 수신 거부율" },
       ],

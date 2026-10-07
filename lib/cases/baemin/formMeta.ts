@@ -40,9 +40,9 @@ const common: FieldMeta[] = [
       { value: "pageview", label: "페이지뷰", desc: "화면을 열 때마다 그룹이 바뀔 수 있어요." },
     ],
   },
-  { name: "metrics.primary", label: "메인 지표", help: "실험의 성패를 가르는 지표 한 개", type: "select", options: METRIC_OPTIONS },
-  { name: "metrics.guardrails", label: "가드레일 지표", help: "나빠지면 안 되는 지표", type: "multiselect", options: METRIC_OPTIONS },
-  { name: "metrics.secondary", label: "보조 지표", help: "다음 가설을 찾는 데 쓰는 지표", type: "multiselect", options: METRIC_OPTIONS },
+  { name: "metrics.primary", label: "Primary 지표", help: "실험의 성패를 가르는 지표 한 개. 실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요.", type: "select", options: METRIC_OPTIONS },
+  { name: "metrics.secondary", label: "Secondary·Driver 지표", help: "다음 가설을 찾는 데 쓰는 지표", type: "multiselect", options: METRIC_OPTIONS },
+  { name: "metrics.guardrails", label: "Guardrail 지표", help: "나빠지면 안 되는 지표", type: "multiselect", options: METRIC_OPTIONS },
   {
     name: "alpha", label: "유의수준(α)", type: "select",
     options: [{ value: 0.01, label: "1%" }, { value: 0.05, label: "5%" }, { value: 0.1, label: "10%" }],

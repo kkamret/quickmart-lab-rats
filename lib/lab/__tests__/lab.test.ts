@@ -58,7 +58,7 @@ describe("기본 설계와 폼 검증 메시지", () => {
     const r = baeminClient.designSchema.p1.safeParse(d);
     expect(r.success).toBe(false);
     const msgs = formatIssues(r.error!.issues, baeminClient.formMeta.p1);
-    expect(msgs.join("\n")).toContain("메인 지표");
+    expect(msgs.join("\n")).toContain("Primary 지표");
     expect(msgs.join("\n")).toContain("실험 단위");
     expect(msgs.join("\n")).toContain("중간 확인 규칙");
     expect(msgs.join("\n")).toContain("대상과 Treatment");

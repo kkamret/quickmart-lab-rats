@@ -30,7 +30,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
     { name: "hypothesis.action", label: "대상과 Treatment: 누구에게 무엇을 적용하나요?", type: "textarea" },
     { name: "hypothesis.behavior", label: "이유: 그래서 사용자 행동이 어떻게 달라지나요?", type: "textarea" },
     { name: "hypothesis.impact", label: "Metric·방향·변화 크기: 어떤 지표가 얼마나 움직이나요?", type: "textarea" },
-    { name: "primary_metric_definition", label: "메인 지표(답례 후기 작성률)의 정의", help: "무엇을 '작성했다'고 셀까요? 측정 시점도 정해야 해요.", type: "select", options: DEF_OPTIONS },
+    { name: "primary_metric_definition", label: "Primary 지표(답례 후기 작성률)의 정의", help: "무엇을 '작성했다'고 셀까요? 측정 시점도 정해야 해요.", type: "select", options: DEF_OPTIONS },
     { name: "success_criteria", label: "성공 기준", help: "결과를 보기 전에 숫자로 정해요.", type: "textarea" },
     { name: "risks", label: "리스크", type: "textarea" },
     { name: "owner", label: "담당자", type: "text" },
@@ -45,9 +45,9 @@ export const formMeta: Record<string, FieldMeta[]> = {
         { value: "server_db", label: "서버 DB", desc: "서버에 저장된 후기 기록으로 집계해요." },
       ],
     },
-    { name: "metric_definition", label: "메인 지표 정의", type: "select", options: DEF_OPTIONS },
+    { name: "metric_definition", label: "Primary 지표 정의", help: "실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요.", type: "select", options: DEF_OPTIONS },
     {
-      name: "guardrails", label: "가드레일 지표", help: "나빠지면 안 되는 지표", type: "multiselect",
+      name: "guardrails", label: "Guardrail 지표", help: "나빠지면 안 되는 지표", type: "multiselect",
       options: [
         { value: "short_review_rate", label: "짧은 후기 비율", desc: "10자 미만 후기가 제출된 후기 중 차지하는 비율" },
         { value: "uninstall_rate", label: "앱 삭제율" },
@@ -100,14 +100,14 @@ export const formMeta: Record<string, FieldMeta[]> = {
       ],
     },
     {
-      name: "primary", label: "메인 지표", type: "select",
+      name: "primary", label: "Primary 지표", help: "실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요.", type: "select",
       options: [
         { value: "listing_creation_rate", label: "게시글 작성률", desc: "검색 사용자 중 7일 내 판매글을 작성 완료한 비율" },
         { value: "sell_through_7d", label: "신규 게시글 7일 내 판매완료율", desc: "새로 올라온 게시글이 7일 안에 판매완료된 비율(시장 지표)" },
       ],
     },
     {
-      name: "guardrails", label: "가드레일 지표", type: "multiselect",
+      name: "guardrails", label: "Guardrail 지표", type: "multiselect",
       options: [{ value: "search_to_chat", label: "검색 → 채팅 시작 전환율" }, { value: "search_retry", label: "검색 재시도율" }],
     },
     {
@@ -120,7 +120,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
     { name: "duration_days", label: "실험 기간", help: "7~42일", type: "number", min: 7, max: 42, step: 1, unit: "일" },
     { name: "alpha", label: "유의수준(α)", type: "select", options: ALPHA },
     { name: "power", label: "검정력", type: "select", options: POWER },
-    { name: "mde_pct", label: "최소 검출 효과(MDE)", help: "메인 지표의 상대 %", type: "number", min: 0.1, step: 0.1, unit: "%" },
+    { name: "mde_pct", label: "최소 검출 효과(MDE)", help: "Primary 지표의 상대 %", type: "number", min: 0.1, step: 0.1, unit: "%" },
     { name: "qualitative_weight", label: "정성 의견을 결정에 어떻게 반영할까요?", help: "결과 화면의 사용자 의견을 어떻게 다룰지 미리 적어요.", type: "textarea" },
   ],
 };
