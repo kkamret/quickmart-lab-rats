@@ -18,7 +18,7 @@ export const CASES: Record<CaseKey, CaseMeta> = {
     company: "배민",
     difficulty: 2,
     recommended: "실험 입문",
-    question: "메인이 안 움직인 실험은 실패인가?",
+    question: "Primary가 안 움직인 실험은 실패인가?",
   },
   toss: {
     key: "toss",

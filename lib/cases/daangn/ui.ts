@@ -28,7 +28,7 @@ export const daangnMeta = {
   difficulty: 2 as const,
   concepts: [
     "실험 문서와 가설", "트리거 기반 배정", "ITT vs 트리거 분석", "A/A 테스트", "SRM", "배정 키 불일치로 인한 오염", "해싱과 salt",
-    "계측 신뢰성과 데이터 소스", "신규 사용자와 외적 타당성", "지표 정의(Goodhart)", "품질 가드레일", "양면 시장과 간섭", "클러스터 배정과 강건 SE", "Data-informed decision",
+    "계측 신뢰성과 데이터 소스", "신규 사용자와 외적 타당성", "지표 정의(Goodhart)", "품질 Guardrail", "양면 시장과 간섭", "클러스터 배정과 강건 SE", "Data-informed decision",
   ],
   theory: ["hypothesis", "trigger", "aa_test", "srm", "goodhart", "unit", "analysis_unit", "contamination"] as TheoryKey[],
 };

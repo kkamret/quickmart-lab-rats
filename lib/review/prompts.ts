@@ -84,7 +84,7 @@ export const FLAG_NUDGES: Partial<Record<Flag, string>> = {
   NAIVE_SE: "같은 사용자의 여러 관측을 독립이라고 가정해도 될까요?",
   NOVELTY: "처음 본 사용자의 반응과 익숙해진 뒤의 반응이 같을까요?",
   CONTAMINATION: "두 그룹이 서로 영향을 주고받을 수는 없었을까요?",
-  STAKEHOLDER_EVENT: "실험을 시작하기 전에 영향을 받는 담당자들과 목적·가드레일·리스크를 함께 이야기했나요?",
+  STAKEHOLDER_EVENT: "실험을 시작하기 전에 영향을 받는 담당자들과 목적·Guardrail·리스크를 함께 이야기했나요?",
   GOODHART: "이 지표를 올리는 것이 정말 우리가 원하던 결과와 같은 방향일까요?",
 };
 

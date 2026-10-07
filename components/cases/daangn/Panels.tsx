@@ -127,7 +127,7 @@ export function DaangnPanels({ phase, panels }: { phase: string; panels: Record<
       {clusters && (
         <PanelSection open title="동네(클러스터) 배정 정보" hint="그룹당 동네 수와 동네 안의 규모, 같은 동네 안 상관(ICC)의 추정값이에요.">
           <p className="text-sm tabular-nums">
-            전체 {fmtInt(clusters.neighborhoods)}개 동네 · A {fmtInt(clusters.perArm[0])}개 / B {fmtInt(clusters.perArm[1])}개 · 그룹당 동네 평균 검색 사용자 {fmtInt(clusters.meanUsersPerNeighborhood)}명, 신규 게시글 {fmtInt(clusters.meanListingsPerNeighborhood)}건 · 메인 지표의 ICC 추정 {clusters.iccEstimate.toFixed(3)}
+            전체 {fmtInt(clusters.neighborhoods)}개 동네 · A {fmtInt(clusters.perArm[0])}개 / B {fmtInt(clusters.perArm[1])}개 · 그룹당 동네 평균 검색 사용자 {fmtInt(clusters.meanUsersPerNeighborhood)}명, 신규 게시글 {fmtInt(clusters.meanListingsPerNeighborhood)}건 · Primary 지표의 ICC 추정 {clusters.iccEstimate.toFixed(3)}
           </p>
         </PanelSection>
       )}

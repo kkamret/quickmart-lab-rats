@@ -111,7 +111,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
         { value: "sequential", label: "순차 검정(경계를 넘으면 종료)" },
       ],
     },
-    { name: "stakeholder_alignment", label: "서비스 담당자에게 목적·가드레일·리스크를 사전에 공유했나요?", type: "boolean" },
+    { name: "stakeholder_alignment", label: "서비스 담당자에게 목적·Guardrail·리스크를 사전에 공유했나요?", type: "boolean" },
   ],
   p2: [
     {
