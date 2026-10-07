@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { fmtInt, fmtP, fmtPct } from "@/components/readout/format";
-import { Button, Card, inputClass } from "@/components/ui";
+import { Button, Card, TheoryBadge, inputClass } from "@/components/ui";
 import { peekingExperiment, simpsonRows, srmCheck, type PeekingResult } from "@/lib/lab/trap-lab";
 
 /** s7 함정 연구소: 공통 화면. Readout 에서 스쳐 지나간 함정(Peeking, 심슨의 역설, SRM)을 직접 돌려본다. 브라우저에서만 계산한다. */
@@ -21,7 +21,7 @@ function Peeking() {
   const [res, setRes] = useState<PeekingResult | null>(null);
   return (
     <Card>
-      <h2 className="text-xl font-bold">Peeking: 매일 확인하다 유의하면 멈추면?</h2>
+      <h2 className="text-xl font-bold">Peeking: 매일 확인하다 유의하면 멈추면?<TheoryBadge k="peeking" /></h2>
       <p className="mt-1 text-sm text-ink2">효과가 전혀 없는 A/A 실험을 수백 번 돌려요. 끝에 한 번만 보는 것과, 매일 보다가 p &lt; 0.05가 뜨는 순간 멈추는 것의 위양성률을 비교해요.</p>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="text-sm">
@@ -82,7 +82,7 @@ function Simpson() {
   const rows = useMemo(() => simpsonRows(view), [view]);
   return (
     <Card>
-      <h2 className="text-xl font-bold">심슨의 역설: 램프업 중 비율을 바꿨다면</h2>
+      <h2 className="text-xl font-bold">심슨의 역설: 램프업 중 비율을 바꿨다면<TheoryBadge k="simpson" /></h2>
       <p className="mt-1 text-sm text-ink2">첫 주는 B에 10%만 배정했다가, 둘째 주에 50%로 늘렸어요. 그런데 둘째 주는 마침 대형 프로모션 주간이었어요.</p>
       <div className="mt-3 flex gap-2">
         <Button variant={view === "pool" ? "primary" : "ghost"} onClick={() => setView("pool")}>전체 기간 합쳐 보기</Button>
@@ -125,7 +125,7 @@ function SrmCalc() {
   const res = srmCheck(+a, +b, +r / 100);
   return (
     <Card>
-      <h2 className="text-xl font-bold">SRM 계산기</h2>
+      <h2 className="text-xl font-bold">SRM 계산기<TheoryBadge k="srm" /></h2>
       <p className="mt-1 text-sm text-ink2">설계한 배정 비율과 실제 사용자 수가 우연 이상으로 다른지 확인해요. 실무에서는 p &lt; 0.001이면 SRM으로 보고 결과 해석을 멈춰요.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <Num label="A그룹 사용자 수" value={a} onChange={setA} />

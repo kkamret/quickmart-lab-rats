@@ -1,5 +1,6 @@
 import type { Readout } from "@/lib/sim/core/readout";
 import { fmtInt, fmtP } from "./format";
+import { TheoryBadge } from "../ui";
 
 /**
  * 데이터 품질: 실제 사용자 수와 계획한 배정 비율. 판정은 하지 않고 숫자만 보여준다(스스로 발견하게).
@@ -9,7 +10,7 @@ export function SrmStrip({ srm, arms }: { srm: NonNullable<Readout["srm"]>; arms
   return (
     <div className="rounded-xl border border-line bg-sunk px-4 py-3 text-sm">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-        <b>데이터 품질 · 배정 비율</b>
+        <b>데이터 품질 · 배정 비율<TheoryBadge k="srm" /></b>
         {srm.counts.map((c, i) => (
           <span key={arms[i]} className="tabular-nums">
             {arms[i]} <b>{fmtInt(c)}</b>명 <span className="text-ink3">(계획 {(srm.ratios[i] * 100).toFixed(1)}% · 실제 {((c / srm.counts.reduce((s, x) => s + x, 0)) * 100).toFixed(1)}%)</span>
