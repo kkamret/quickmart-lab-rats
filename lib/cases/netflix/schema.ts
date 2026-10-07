@@ -14,6 +14,7 @@ const correction = z.enum(["none", "bonferroni", "bh"], "다중검정 보정을 
 export const p1Schema = z
   .object({
     phase: z.literal("p1"),
+    hypothesis: z.string().trim().optional(),
     method: z.enum(["abn_all", "interleaving"], "스크리닝 방식을 골라주세요"),
     abn_primary: z.enum(["hours", "retention"]).optional(),
     abn_fraction: z.number().min(0.01, "1% 이상으로 해주세요").max(0.2, "20% 이하로 해주세요").optional(),

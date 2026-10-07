@@ -33,6 +33,10 @@ export const formMeta: Record<string, FieldMeta[]> = {
   ],
   p1: [
     {
+      name: "hypothesis", label: "가설 한 문장 (선택)", type: "textarea",
+      help: "[대상]에게 [Treatment]를 적용하면, [이유] 때문에 [Metric]이 [방향]으로 변할 것이다. 예: 오프라인 1위 랭커를 그대로 쓰는 대신 온라인에서 걸러 내면, …",
+    },
+    {
       name: "method", label: "스크리닝 방식", help: "후보 8개를 어떻게 걸러낼까요?", type: "select",
       options: [
         { value: "abn_all", label: "전부 A/B/n", desc: "후보마다 그룹을 만들어 현행과 비교해요." },
