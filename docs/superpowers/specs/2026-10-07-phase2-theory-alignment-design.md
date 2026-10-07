@@ -89,3 +89,25 @@
 - 클러스터 강건 SE와 HTE는 앱 사례(당근·토스)에 쓰이지만 덱에 없다.
 - `docs/ab-testing/05-experimentation-platform.md`의 3.2절이 아직 작성되지 않았다.
 - 위키는 Ch2 전반(01~05)만 있고 Ch3~4 위키 문서가 없어서, 해당 배지는 위키 링크 없이 슬라이드 번호만 보여 준다.
+
+## 개정 (2026-10-07, 새 이론 반영)
+덱에 추가된 이론을 `lib/theory.ts`에 반영한다. 슬라이드 번호는 쓰지 않고 챕터만 안내한다.
+
+| 키 | 개념 | 챕터 |
+|---|---|---|
+| alpha_power | α와 Power | Ch2 |
+| mde | MDE 정하기 | Ch2 |
+| allocation | 배정 비율 | Ch2 |
+| north_star | 노스스타와 OEC | Ch2 |
+| driver | Driver 지표 | Ch2 |
+| session_unit | 세션 단위 | Ch2 |
+| ratio_metric | 비율 지표 | Ch2 |
+| ramp_up | 램프업 | Ch3 |
+| interference | 간섭 | Ch4 |
+| interference_fix | 간섭 줄이기 | Ch4 |
+| ethics | 윤리 | Ch4 |
+
+- `FIELD_THEORY`: alpha·power는 alpha_power, mde_pp·mde_pct는 mde, ramp·include_ramp_days는 ramp_up, secondary 계열은 driver, daangn `analysis_se`는 interference_fix로 연결한다.
+- 간섭 관련 개념은 정답 공개 전 스텝의 이론 복습 줄에 넣지 않고, 사례별 "오늘 쓴 개념" 표(공개 후)와 s7_lab에서만 보여 준다.
+- 모든 개념 키는 필드·스텝·사례 표 중 한 곳 이상에서 쓰이도록 테스트로 확인한다(고아 개념 방지).
+- 팀원의 위키·덱 브랜치(`origin/docs/10-wiki-interference`)는 우리 쪽에서 읽기 전용이며 main에 병합하지 않았다.
