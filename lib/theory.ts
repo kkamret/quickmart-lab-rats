@@ -2,30 +2,38 @@
  * 이론 수업(덱, 위키 docs/ab-testing/*.md)과 실습을 잇는 개념 표. 덱은 팀원이 레이아웃을 따로 만들고 있어 슬라이드 번호는 두지 않고 챕터만 안내한다.
  * 클라이언트 번들에 들어가므로 숨긴 효과·플래그 이름·루브릭을 담지 않는다. 덱이 바뀌면 이 파일만 고친다.
  */
-export type TheoryEntry = { title: string; chapter: 2 | 3 | 4 };
+export type TheoryChapter = 1 | 2 | 3 | 4 | 5;
+export type TheoryEntry = {
+  title: string;
+  chapter: TheoryChapter;
+  /** 정답 공개 뒤 카드에만 보이는 짧은 풀이. docs/theory-coverage.md 패러프레이즈 은행 문장만 쓴다. */
+  note?: string;
+  /** 함정 개념: 정답 공개 전에는 이름·풀이를 팀 화면에 두지 않는다(챕터 배지만 허용). */
+  revealOnly?: true;
+};
 
-const e = (title: string, chapter: 2 | 3 | 4): TheoryEntry => ({ title, chapter });
+const e = (title: string, chapter: TheoryChapter, extra: { note?: string; revealOnly?: true } = {}): TheoryEntry => ({ title, chapter, ...extra });
 
 export const THEORY = {
   hypothesis: e("가설 문장 구조", 2),
   tails: e("단측·양측 검정", 2),
-  non_inferiority: e("비열등성 검정", 2),
+  non_inferiority: e("비열등성 검정", 2, { note: "비열등성은 허용할 손실(마진)을 먼저 정하고, 신뢰구간 하한이 마진보다 위인지 확인해요.", revealOnly: true }),
   metric_layers: e("지표 층", 2),
-  goodhart: e("Goodhart의 법칙", 2),
+  goodhart: e("Goodhart의 법칙", 2, { note: "지표가 목표가 되면 숫자는 좋아져도, 그 숫자가 대변하던 가치는 나빠질 수 있어요.", revealOnly: true }),
   predefine: e("사전 정의", 2),
   unit: e("실험 단위", 2),
-  trigger: e("트리거 분석", 2),
+  trigger: e("트리거 분석", 2, { note: "트리거 분석은 조건을 충족한 사람만 비교해요. 대조군도 같은 기준으로 골라야 해서 조건을 기록해 둬요.", revealOnly: true }),
   error_power: e("1·2종 오류와 검정력", 2),
   randomization: e("무작위 배정과 SUTVA", 2),
   aa_test: e("A/A 테스트", 3),
   duration: e("실험 기간", 3),
-  analysis_unit: e("배정 단위와 분석 단위", 3),
+  analysis_unit: e("배정 단위와 분석 단위", 3, { note: "같은 사용자의 관측은 서로 닮아서, 개수만큼 독립적인 정보가 있는 게 아니에요. 배정 단위와 분석 단위가 다르면 묶여 있다는 사실을 반영해 표준오차를 계산해요.", revealOnly: true }),
   inference: e("p-value·신뢰구간·효과 크기", 3),
   cuped: e("CUPED", 3),
-  multiple_testing: e("다중검정", 3),
+  multiple_testing: e("다중검정", 3, { note: "효과가 없어도 지표를 많이 보면 하나쯤은 우연히 유의하게 나와요.", revealOnly: true }),
   peeking: e("Peeking", 3),
-  novelty: e("Novelty·Primacy 효과", 3),
-  repeat_exposure: e("반복 노출", 3),
+  novelty: e("Novelty·Primacy 효과", 3, { revealOnly: true }),
+  repeat_exposure: e("반복 노출", 3, { note: "효과가 처음부터 끝까지 같다는 보장은 없어서, 시작 후 일차별 추이를 함께 봐요.", revealOnly: true }),
   sequential: e("Sequential Testing", 4),
   simpson: e("심슨의 역설", 4),
   srm: e("Sample Ratio Mismatch", 4),
@@ -36,11 +44,19 @@ export const THEORY = {
   north_star: e("노스스타와 OEC", 2),
   driver: e("Driver 지표", 2),
   session_unit: e("세션 단위", 2),
-  ratio_metric: e("비율 지표", 2),
+  ratio_metric: e("비율 지표", 2, { note: "처치가 비율 지표의 분모를 바꾸면, 분자가 그대로여도 비율이 오를 수 있어요.", revealOnly: true }),
   ramp_up: e("램프업", 3),
-  interference: e("간섭", 4),
-  interference_fix: e("간섭 줄이기", 4),
+  interference: e("간섭", 4, { revealOnly: true }),
+  interference_fix: e("간섭 줄이기", 4, { revealOnly: true }),
   ethics: e("윤리", 4),
+  ab_n: e("A/B/n", 1, { note: "A/B/n은 대조군 하나에 실험군을 둘 이상 두고 비교하는 형태예요." }),
+  data_informed: e("데이터 기반 의사결정", 5, { note: "데이터 기반 의사결정은 A/B 테스트뿐 아니라 조사, 유지보수 비용 추정 같은 여러 데이터로 판단한다는 뜻이에요." }),
+  interleaving: e("인터리빙", 4, { note: "인터리빙은 두 랭킹 알고리즘의 결과를 한 목록에 섞어 어느 쪽이 클릭되는지 봐요." }),
+  bandit: e("멀티암드 밴딧", 4, { note: "밴딧은 탐색(아직 모르는 쪽도 시도)과 활용(지금 좋은 쪽에 몰아주기)의 균형을 다뤄요." }),
+  proxy_metric: e("대리 지표(proxy)", 2, { note: "측정하는 지표는 대부분 진짜 원하는 가치를 대신 재는 proxy예요." }),
+  tail_metric: e("꼬리가 긴 지표", 3, { note: "평균을 비교하는 지표에서 꼬리가 길면 상한 처리나 로그 변환을 고려해요." }),
+  hashing: e("해싱 배정", 2, { note: "ID를 해시해 버킷을 정하면 같은 사용자는 항상 같은 그룹에 들어가요.", revealOnly: true }),
+  identifier: e("사용자 식별자", 2, { note: "식별자는 사람의 근사치일 뿐, 어떤 식별자도 사람을 완벽히 대표하지 못해요.", revealOnly: true }),
 } as const satisfies Record<string, TheoryEntry>;
 
 export type TheoryKey = keyof typeof THEORY;
@@ -53,6 +69,9 @@ export const NEUTRAL_BADGE_TITLE = "이론 수업 챕터";
 
 /** "Ch3" (개념 이름 없이 챕터만) */
 export const theoryChapterOnly = (k: TheoryKey) => `Ch${THEORY[k].chapter}`;
+
+/** 정답 공개 뒤 카드에 쓰는 짧은 풀이(없으면 undefined). */
+export const theoryNote = (k: TheoryKey): string | undefined => (THEORY[k] as TheoryEntry).note;
 
 /** "Ch2 · 가설 문장 구조" */
 export const theoryLabel = (k: TheoryKey) => `Ch${THEORY[k].chapter} · ${THEORY[k].title}`;
@@ -73,6 +92,7 @@ export const FIELD_THEORY: Record<string, TheoryKey> = {
   stopping: "peeking", ramp: "ramp_up", exclude_first_week: "novelty", include_ramp_days: "ramp_up",
   cuped: "cuped", correction: "multiple_testing",
   run_aa_first: "aa_test", rerun_aa: "aa_test", aa_days: "aa_test",
+  trigger_logging: "trigger", il_credit: "goodhart", arms: "ab_n", qualitative_weight: "data_informed", hours_treatment: "tail_metric", salt: "hashing",
   count_basis: "trigger", data_source: "contamination", analysis_se: "interference_fix",
 };
 
@@ -81,7 +101,7 @@ export const STEP_THEORY: Partial<Record<string, TheoryKey[]>> = {
   s1_diagnose: ["hypothesis"],
   s2_design: ["hypothesis", "metric_layers", "unit", "error_power", "predefine", "alpha_power", "mde", "allocation"],
   s3_run: ["duration", "randomization", "ramp_up"],
-  s4_readout: ["inference", "analysis_unit"],
+  s4_readout: ["inference"],
   s6_final: ["predefine", "inference", "ethics"],
   s7_lab: ["peeking", "simpson", "srm"],
 };
