@@ -1441,7 +1441,12 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
     R("Always-Valid p-value: 언제 멈춰도 α 유지. 대신 검정력이 조금 낮다", { fontSize: 15, color: C.text2 }),
   ], { x: 6.95, y: 2.1, w: 5.6, h: 1.8 });
   T(s, [R("실무에서 이렇게 말한다  ", { bold: true, color: C.accent1 }),
-    R("\"매일 대시보드는 보되, 결정은 미리 정한 종료일이나 Sequential 기준으로만 합니다\"")], { x: L, y: 4.6, w: CW, h: 0.8, fontSize: 15 });
+    R("\"매일 대시보드는 보되, 결정은 미리 정한 종료일이나 Sequential 기준으로만 합니다\"")], { x: L, y: 4.3, w: CW, h: 0.6, fontSize: 15 });
+  T(s, [
+    BR("Sequential Testing은 '매일 보고 마음대로 멈추기'가 아니다", { bold: true, fontSize: 20, paraSpaceAfter: 6 }),
+    BR("경계값이나 오류율 사용 방식을 미리 설계한다: Alpha Spending, Group Sequential Test, Always-Valid p-value", { bullet: true }),
+    R("결과가 궁금해서 실험 중간에 Sequential로 바꾸지 않는다. 중단 규칙까지 실험 전에 정한다", { bullet: true }),
+  ], { x: L, y: 5.0, w: CW, h: 1.5, fontSize: 15, paraSpaceAfter: 4 });
 }
 {
   const s = content("Ch4 함정과 고급 설계", "Ch4 · 심슨의 역설", "세그먼트마다 이기는데 전체로는 진다",
@@ -1464,7 +1469,7 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
 {
   const s = content("Ch4 함정과 고급 설계", "Ch4 · Sample Ratio Mismatch", "결과보다 배정 비율을 먼저 본다",
     "50:50으로 설계했는데 A 50,000명, B 48,800명이 들어왔다면 차이는 1.2%뿐이지만 카이제곱 검정 p ≈ 0.0001로 우연이라 보기 어렵습니다. "
-    + "SRM이 있으면 결과를 해석하지 말고 원인부터 찾습니다. 우리 실습 앱의 Readout도 SRM을 맨 먼저 보여줍니다.");
+    + "SRM이 있으면 결과를 해석하지 말고 원인부터 찾습니다. 우리 실습 앱의 Readout도 SRM을 맨 먼저 보여줍니다. 위키 10편 2장: SRM 검정은 왜 문제가 생겼는지까지 알려주지 않는 경고등이고, 빠진 사용자가 무작위가 아니면 Selection Bias가 생깁니다.");
   T(s, [R("50,000", { color: C.accent1 }), R("  vs  ", { color: C.accent6, bold: false }), R("48,800", { color: C.accent2 })],
     { x: L, y: 2.05, w: 7.2, h: 1.2, fontSize: 54, bold: true });
   T(s, "50:50으로 설계한 실험에 실제로 들어온 사용자 수 (교육용 예시)",
@@ -1474,18 +1479,24 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
   T(s, [R("SRM이면 결과 해석 금지. ", { bold: true, color: C.accent4 }), R("원인을 고치고 다시 돌립니다")],
     { x: L, y: 4.7, w: 7, h: 0.5, fontSize: 20 });
   T(s, [
-    BR("흔한 원인", { bold: true, fontSize: 20, paraSpaceAfter: 8 }),
-    BR("B에만 걸린 리다이렉트·느린 로딩", { bullet: true }),
-    BR("봇 필터가 한쪽에만 다르게 작동", { bullet: true }),
-    BR("한쪽 로그 누락", { bullet: true }),
-    R("배정 코드 버그, 캐시 문제", { bullet: true }),
-  ], { x: 8.4, y: 2.1, w: 4.2, h: 3.4, fontSize: 15, paraSpaceAfter: 8 });
+    BR("어디서든 생긴다", { bold: true, fontSize: 20, paraSpaceAfter: 6 }),
+    R("배정  ", { bold: true }), BR("해시·버킷 로직, 비율 설정 오류", { paraSpaceAfter: 3 }),
+    R("노출  ", { bold: true }), BR("특정 기기·브라우저에서 B가 안 뜸", { paraSpaceAfter: 3 }),
+    R("로깅  ", { bold: true }), BR("한 Variant의 이벤트 누락", { paraSpaceAfter: 3 }),
+    R("데이터 처리  ", { bold: true }), BR("Join·ETL·필터에서 한쪽이 더 빠짐", { paraSpaceAfter: 3 }),
+    R("분석  ", { bold: true }), R("결과를 보고 특정 사용자만 제거"),
+  ], { x: 8.2, y: 2.1, w: 4.45, h: 3.3, fontSize: 15 });
+  T(s, [R("점검 요령  ", { bold: true, color: C.accent1 }),
+    R("배정 단위로 센다(사용자 배정이면 세션이 아니라 고유 사용자 수). 기기·브라우저·날짜·국가·유입 채널로 쪼개 보면 원인이 보인다")],
+  { x: L, y: 5.45, w: CW, h: 0.7, fontSize: 15 });
+  T(s, "SRM은 결과 지표가 아니라 실험을 믿을 수 있는지 보는 지표(Trustworthiness Metric)입니다. 문제는 인원수 차이가 아니라 누가 빠졌는지 모른다는 것",
+    { x: L, y: 6.15, w: CW, h: 0.5, fontSize: 14, color: C.text2 });
 }
 {
   const s = content("Ch4 함정과 고급 설계", "Ch4 · 그 밖의 오염 신호", "측정이 흔들리면 결과도 흔들린다",
     "세 가지를 짧게 짚습니다. 생존 편향은 '남아 있는 사용자 중' 같은 지표에서 자주 생기고, 계측 효과는 B에만 로깅이 바뀌었을 때 생깁니다.");
   const items = [
-    ["Survivorship Bias", "남은 사람만 본다", "\"활성 사용자의 체류 시간\"이 올랐는데, 사실 덜 쓰던 사람이 B에서 떠났을 수 있다"],
+    ["Survivorship Bias", "남은 사람만 본다", "B 화면이 일부 환경에서 느려 이탈한 사용자가 노출 로그에서 빠지면, 남은 사용자만 비교해 B가 좋아 보인다"],
     ["Network Effect · Spillover", "그룹 사이로 번진다", "B의 효과가 A로 새어 나가 차이가 과소 추정된다"],
     ["Instrumentation Effect", "재는 방법이 바뀌었다", "B 화면에만 클릭 로깅을 새로 붙이면 지표 차이가 측정 차이일 수 있다"],
   ];
@@ -1494,6 +1505,9 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
     T(s, [BR(h, { bold: true, fontSize: 20 }), BR(sub, { fontSize: 15, color: C.accent1, paraSpaceAfter: 10 }),
       R(b, { fontSize: 15, color: C.text2 })], { x, y: 2.1, w: 3.7, h: 3.0 });
   });
+  T(s, [R("결과를 본 뒤 필터링하지 않는다  ", { bold: true, color: C.accent4 }),
+    R("'결제를 시도한 사용자만', '10초 이상 본 사용자만'처럼 처치 이후 행동으로 분석 대상을 고르면 서로 다른 사람을 비교하게 된다. 분석 대상과 제외 규칙은 실험 전에 정한다")],
+  { x: L, y: 5.2, w: CW, h: 0.9, fontSize: 15 });
 }
 {
   const s = content("Ch4 함정과 고급 설계", "Ch4 · 간섭(Interference)", "간섭은 두 경로로 생긴다",

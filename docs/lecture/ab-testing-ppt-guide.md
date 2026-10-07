@@ -304,3 +304,13 @@
 | 다중검정 | Bonferroni(FWER)와 BH(FDR)의 통제 대상·쓰임 |
 | CUPED 주의점 (신규 1장) | 상관이 낮으면 효과 작음, 실험 전 변수만, 신규 사용자, 잘못된 설계는 못 고침 |
 
+### 위키 10편 실무 (2) 반영 (2026-10-07)
+
+덱 Ch4의 SRM·Sequential Testing·오염 신호 슬라이드와 겹치는 내용은 빼고, 위키에만 있는 내용을 녹였습니다. 슬라이드 수는 그대로입니다.
+
+| 슬라이드 | 녹인 내용 |
+| --- | --- |
+| Sample Ratio Mismatch | 원인을 파이프라인 단계별로(배정·노출·로깅·데이터 처리·분석), 배정 단위로 세고 축별로 쪼개 보는 점검 요령, Trustworthiness Metric |
+| Sequential Testing | Alpha Spending·Group Sequential·Always-Valid, "결과가 궁금해서 중간에 Sequential로 바꾸지 않는다" |
+| 그 밖의 오염 신호 | 생존 편향 예시를 위키 사례(느린 로딩 → 노출 로그 누락)로 교체, "결과를 본 뒤 필터링하지 않는다" |
+
