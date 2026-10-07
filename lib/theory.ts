@@ -30,6 +30,17 @@ export const THEORY = {
   simpson: e("심슨의 역설", 4),
   srm: e("Sample Ratio Mismatch", 4),
   contamination: e("그 밖의 오염 신호", 4),
+  alpha_power: e("α와 Power", 2),
+  mde: e("MDE 정하기", 2),
+  allocation: e("배정 비율", 2),
+  north_star: e("노스스타와 OEC", 2),
+  driver: e("Driver 지표", 2),
+  session_unit: e("세션 단위", 2),
+  ratio_metric: e("비율 지표", 2),
+  ramp_up: e("램프업", 3),
+  interference: e("간섭", 4),
+  interference_fix: e("간섭 줄이기", 4),
+  ethics: e("윤리", 4),
 } as const satisfies Record<string, TheoryEntry>;
 
 export type TheoryKey = keyof typeof THEORY;
@@ -52,26 +63,26 @@ export const FIELD_THEORY: Record<string, TheoryKey> = {
   "hypothesis.action": "hypothesis", "hypothesis.behavior": "hypothesis", "hypothesis.impact": "hypothesis",
   "hypothesis_type.push_ctr": "tails", "hypothesis_type.clicks_per_user": "non_inferiority", "hypothesis_type.app_open_au": "non_inferiority",
   ni_margin_pct: "non_inferiority",
-  "metrics.primary": "metric_layers", "metrics.guardrails": "metric_layers", "metrics.secondary": "metric_layers",
-  primary: "metric_layers", guardrails: "metric_layers", secondary: "metric_layers", abn_primary: "metric_layers",
+  "metrics.primary": "metric_layers", "metrics.guardrails": "metric_layers", "metrics.secondary": "driver",
+  primary: "metric_layers", guardrails: "metric_layers", secondary: "driver", abn_primary: "metric_layers",
   metric_definition: "metric_layers", primary_metric_definition: "metric_layers",
   unit: "unit", randomization_unit: "unit", assignment_key: "unit",
   ctr_analysis_unit: "analysis_unit", analysis_population: "trigger", assignment_timing: "trigger",
-  alpha: "error_power", power: "error_power", mde_pp: "error_power", mde_pct: "error_power",
+  alpha: "alpha_power", power: "alpha_power", mde_pp: "mde", mde_pct: "mde",
   duration_days: "duration", duration_weeks: "duration", il_days: "duration", abn_weeks: "duration",
-  stopping: "peeking", ramp: "novelty", exclude_first_week: "novelty", include_ramp_days: "novelty",
+  stopping: "peeking", ramp: "ramp_up", exclude_first_week: "novelty", include_ramp_days: "ramp_up",
   cuped: "cuped", correction: "multiple_testing",
   run_aa_first: "aa_test", rerun_aa: "aa_test", aa_days: "aa_test",
-  count_basis: "trigger", data_source: "contamination",
+  count_basis: "trigger", data_source: "contamination", analysis_se: "interference_fix",
 };
 
 /** 스텝 상단 "이론 복습" 줄. 함정 이름이 드러나지 않는 개념만 둔다(s7 은 처음부터 함정 학습이라 예외). */
 export const STEP_THEORY: Partial<Record<string, TheoryKey[]>> = {
   s1_diagnose: ["hypothesis"],
-  s2_design: ["hypothesis", "metric_layers", "unit", "error_power", "predefine"],
-  s3_run: ["duration", "randomization"],
+  s2_design: ["hypothesis", "metric_layers", "unit", "error_power", "predefine", "alpha_power", "mde", "allocation"],
+  s3_run: ["duration", "randomization", "ramp_up"],
   s4_readout: ["inference", "analysis_unit"],
-  s6_final: ["predefine", "inference"],
+  s6_final: ["predefine", "inference", "ethics"],
   s7_lab: ["peeking", "simpson", "srm"],
 };
 

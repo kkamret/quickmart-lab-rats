@@ -28,7 +28,7 @@ export const netflixMeta = {
     "오프라인 지표와 온라인 성과의 간극", "실험 감도와 검정력", "인터리빙(Team Draft vs Balanced)", "위치 편향", "성과 귀속(Goodhart)", "다중검정",
     "2단계 실험 퍼널", "꼬리가 긴 지표(윈저라이징·로그)", "CUPED", "신규성 효과", "대리 지표", "장기 홀드아웃", "Multi-armed Bandit",
   ],
-  theory: ["error_power", "goodhart", "cuped", "multiple_testing", "novelty", "peeking", "metric_layers"] as TheoryKey[],
+  theory: ["error_power", "goodhart", "cuped", "multiple_testing", "novelty", "peeking", "metric_layers", "alpha_power", "mde", "driver", "ramp_up", "repeat_exposure"] as TheoryKey[],
 };
 
 export const netflixClient: ClientCase = {
