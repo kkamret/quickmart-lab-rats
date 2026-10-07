@@ -115,7 +115,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
   ],
   p2: [
     {
-      name: "arms", label: "실험 그룹", help: "s2 에서 제출한 변이안을 이어받아요.", type: "multiselect",
+      name: "arms", label: "실험 그룹", help: "s2 에서 제출한 변이안을 이어받아요. A/B/n 은 대조군 하나에 실험군을 둘 이상 두고 비교하는 형태예요.", type: "multiselect",
       options: [{ value: "A", label: "A (대조군)" }, { value: "V1", label: "V1" }, { value: "V2", label: "V2" }],
     },
     { name: "fraction_total", label: "전체 표본 비율", help: "세 그룹에 나눠요. 6%~30%. 처음 6% 실험의 사용자도 이어서 포함돼요.", type: "number", min: 0.06, max: 0.3, step: 0.01 },

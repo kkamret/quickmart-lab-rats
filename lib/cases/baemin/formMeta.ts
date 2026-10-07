@@ -107,7 +107,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
   p4: [
     ...common,
     {
-      name: "arms", label: "실험 그룹", help: "A 는 대조군, B 는 항상 노출, C 는 부족 금액이 8천 원 이하일 때만 노출해요.", type: "multiselect",
+      name: "arms", label: "실험 그룹", help: "A 는 대조군, B 는 항상 노출, C 는 부족 금액이 8천 원 이하일 때만 노출해요. A/B/n 은 대조군 하나에 실험군을 둘 이상 두고 비교하는 형태예요.", type: "multiselect",
       options: [{ value: "A", label: "A (대조군)" }, { value: "B", label: "B (항상 노출)" }, { value: "C", label: "C (부족 금액 8천 원 이하만)" }],
     },
     {
