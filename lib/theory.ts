@@ -50,7 +50,7 @@ export const wikiHref = (k: TheoryKey): string | undefined => {
 /** 폼 입력란 이름 → 개념. 사례마다 formMeta 를 고치지 않고 AutoForm 이 이 표로 배지를 붙인다. */
 export const FIELD_THEORY: Record<string, TheoryKey> = {
   "hypothesis.action": "hypothesis", "hypothesis.behavior": "hypothesis", "hypothesis.impact": "hypothesis",
-  hypothesis_type: "tails", "hypothesis_type.push_ctr": "tails", "hypothesis_type.clicks_per_user": "non_inferiority", "hypothesis_type.app_open_au": "non_inferiority",
+  "hypothesis_type.push_ctr": "tails", "hypothesis_type.clicks_per_user": "non_inferiority", "hypothesis_type.app_open_au": "non_inferiority",
   ni_margin_pct: "non_inferiority",
   "metrics.primary": "metric_layers", "metrics.guardrails": "metric_layers", "metrics.secondary": "metric_layers",
   primary: "metric_layers", guardrails: "metric_layers", secondary: "metric_layers", abn_primary: "metric_layers",
