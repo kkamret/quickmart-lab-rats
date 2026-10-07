@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_THEORY, NEUTRAL_BADGE_TITLE, STEP_THEORY, THEORY, TITLED_STEPS, theoryBadge, theoryChapterOnly, theoryLabel, wikiHref, type TheoryKey } from "../theory";
+import { FIELD_THEORY, NEUTRAL_BADGE_TITLE, STEP_THEORY, THEORY, TITLED_STEPS, theoryBadge, theoryChapterOnly, theoryLabel, type TheoryKey } from "../theory";
 import { STEP_KEYS } from "../steps";
 import { getClientCase } from "../cases/client-registry";
 import { CASE_KEYS } from "../cases";
@@ -18,10 +18,6 @@ describe("이론 개념 표", () => {
   it("라벨은 챕터와 개념 이름을 함께 보여 준다", () => {
     expect(theoryLabel("hypothesis")).toBe("Ch2 · 가설 문장 구조");
     expect(theoryLabel("metric_layers")).toBe("Ch2 · 지표 층");
-  });
-  it("위키가 있는 개념만 링크를 준다", () => {
-    expect(wikiHref("hypothesis")).toMatch(/docs\/ab-testing\/02-hypothesis\.md$/);
-    expect(wikiHref("peeking")).toBeUndefined();
   });
   it("키 타입이 표와 일치한다", () => {
     const k: TheoryKey = "srm";
