@@ -21,7 +21,6 @@
 
 → 서로 연결된 사용자 사이에서 간섭 발생 가능
 
-
 개선: Cluster Randomization
 
 친구 A ┐
@@ -107,8 +106,6 @@ Marketplace에서는 Treatment와 Control의 자원을 공간적으로 완전히
 - Instrumental Variable(IV)을 활용한 추정
 - 네트워크의 연결 관계를 고려한 분석
 - Direct Effect와 Spillover Effect의 개별 추정
-
-각각의 방법론들은 심화 공부 때 다뤄볼 예정입니다.
 
 ## Reference
 

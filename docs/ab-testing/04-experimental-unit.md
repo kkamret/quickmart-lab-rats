@@ -382,18 +382,6 @@ Microsoft 연구자들은 대부분의 실험이 사용자를 랜덤화 단위�
 
 그래서 <strong>User-level에서 시작하고, 다른 단위를 쓸 때는 이유를 설명할 수 있어야 한다를 기본 원칙으로</strong> 삼으면 됩니다.
 
-.
-
-.
-
-.
-
-.
-
-.
-
-정리를 하면서 실험에 대한 이론도 이론이지만 데이터 로그 설계 쪽을 더 공부해보고 싶다는 생각이 들었습니다.
-
 ## Reference
 
 - [신뢰할 수 있는 실험 분석을 위해 데이터 퀄리티 챙기기](https://playinpap.github.io/data-quality-for-ab-testing/)
