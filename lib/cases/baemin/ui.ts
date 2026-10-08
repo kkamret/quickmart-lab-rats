@@ -33,7 +33,7 @@ export const baeminMeta = {
     "가설(ABI)", "OEC·Guardrail·Secondary·Driver 지표", "실험 단위", "범위와 외적 타당성", "표본·MDE·기간", "신규성 효과", "Peeking", "Ramp-up",
     "SRM·생존 편향·계측 문제", "Underpowered NULL", "트리거 분석·선택 편향", "A/B/n·다중검정", "Secondary·Driver 지표에서 다음 가설 찾기",
   ],
-  theory: ["hypothesis", "metric_layers", "unit", "error_power", "duration", "novelty", "peeking", "srm", "trigger", "multiple_testing", "alpha_power", "mde", "allocation", "ramp_up", "session_unit", "north_star", "driver", "ethics", "sequential", "ab_n"] as TheoryKey[],
+  theory: ["hypothesis", "metric_layers", "unit", "error_power", "duration", "novelty", "peeking", "srm", "trigger", "multiple_testing", "alpha_power", "mde", "allocation", "ramp_up", "session_unit", "north_star", "driver", "ethics", "sequential", "ab_n", "decision"] as TheoryKey[],
   /** 덱·위키에 설명이 없는 개념 이름. 정답 공개 뒤에만 이름으로 보여 준다. */
   outsideTheory: ["이질적 처치 효과(HTE)"] as string[],
 };

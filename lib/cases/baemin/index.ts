@@ -1,5 +1,6 @@
 import type { CasePlugin } from "../types";
 import { SimulationRejected } from "../types";
+import { judgeBaemin } from "./judge";
 import { rubric, reveal } from "./rubric";
 import type { Design } from "./schema";
 import { simulateBaemin } from "./simulate";
@@ -16,6 +17,7 @@ export const baeminPlugin: CasePlugin<Design> = {
   },
   rubric,
   reveal,
+  judge: judgeBaemin,
 };
 
 export { simulateBaemin, validateDesign } from "./simulate";

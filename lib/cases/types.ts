@@ -60,10 +60,16 @@ export interface CasePlugin<D = unknown> {
   /** 서버 전용: 클라이언트 번들에 넣지 않는다 (정답 공개 전에는 조에게 보여주지 않음) */
   rubric: Record<string, string>;
   reveal: Record<string, string>;
+  /** 서버 전용: 조가 고른 결정 옵션을 그 조의 실제 결과(Readout)로 판정한다. 알 수 없는 옵션이면 null. */
+  judge?(phase: string, optionId: string, run: { design: Record<string, unknown>; result: Readout }): Judgement | null;
 }
 
 /** 클라이언트로 보내도 되는 부분(폼·화면에 필요한 것). 시뮬 엔진, 루브릭, 정답 해설은 제외. */
-export type ClientCase = Omit<CasePlugin, "simulate" | "rubric" | "reveal">;
+export type ClientCase = Omit<CasePlugin, "simulate" | "rubric" | "reveal" | "judge">;
+
+/** 결정 옵션의 판정. 근거 문장(reason)은 정답 공개 뒤에만 조에게 보인다. */
+export type Verdict = "correct" | "partial" | "wrong";
+export type Judgement = { verdict: Verdict; reason: string };
 
 /** 시뮬레이션을 돌릴 수 없는 설계. 메시지는 조 화면에 그대로 보여준다. */
 export class SimulationRejected extends Error {
