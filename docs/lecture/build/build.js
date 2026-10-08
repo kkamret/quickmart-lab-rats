@@ -219,8 +219,8 @@ pres.addSection({ title: "오프닝" });
 {
   const s = pres.addSlide({ masterName: "COVER", sectionTitle: "오프닝" });
   s.addText("A/B 테스트\n설계 및 실습", { placeholder: "title" });
-  s.addText("이론 파트 · DA 트랙\n개선 아이디어를 검증 가능한 실험으로, 결과를 배포 결정으로",
-    { placeholder: "sub" });
+  s.addText("개선 아이디어를 검증 가능한 실험으로, 결과를 배포 결정으로", { placeholder: "sub" });
+  T(s, "발표자: 25기 이정연, 25기 이유민", { x: L, y: 4.81, w: 5.0, h: 0.37, fontSize: 15, color: "FFFFFF" });
   // 모티프: 무작위로 두 그룹에 배정된 사용자 점
   const x0 = 8.9, y0 = 1.4, gap = 0.36;
   for (let r = 0; r < 13; r++) for (let c = 0; c < 10; c++) {
@@ -249,7 +249,7 @@ pres.addSection({ title: "오프닝" });
   });
 }
 {
-  const s = content("오프닝", "오프닝", "오늘 다룰 다섯 장",
+  const s = content("오프닝", "오프닝", "목차",
     "Ch4의 함정은 개념만 소개하고, 직접 겪어보는 것은 뒤의 함정·해석·공유 세션에서 합니다.");
   const ch = [
     ["Ch1", "실험과 인과추론"], ["Ch2", "설계의 핵심 구성요소"], ["Ch3", "실행과 통계 분석"],
@@ -264,11 +264,6 @@ pres.addSection({ title: "오프닝" });
     s.addShape(pres.ShapeType.line, { x, y: 3.45, w, h: 0, line: { color: colors[i], width: 6 } });
     x += w + gap;
   });
-  T(s, [
-    BR("통계는 도구, 무게중심은 설계와 해석", { bold: true, fontSize: 20 }),
-    R("수식 유도보다 \"그래서 배포할까?\"로 번역하기 · 이론 뒤에 실습, 함정·해석·공유",
-      { fontSize: 15, color: C.text2 }),
-  ], { x: L, y: 4.7, w: 10.5, h: 1.4 });
 }
 
 // ======================================================
@@ -280,7 +275,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
     "청중에게 먼저 물어봅니다. '전환율이 올랐으니 성공 아닌가요?' "
     + "오른쪽 목록은 같은 기간에 동시에 일어날 수 있는 일들입니다. 전후 비교는 이것들과 배포 효과를 분리하지 못합니다. 수치는 교육용 예시입니다.");
   T(s, "3.0% → 3.4%", { x: L, y: 2.1, w: 6.2, h: 1.3, fontSize: 54, bold: true, color: C.accent1 });
-  T(s, "새 장바구니 화면 배포 전 2주 vs 배포 후 2주\n결제 전환율 (교육용 예시 수치)",
+  T(s, "새 장바구니 화면 배포 전 2주 vs 배포 후 2주\n결제 전환율",
     { x: L, y: 3.5, w: 6, h: 0.8, fontSize: 15, color: C.text2 });
   T(s, "성공일까요?", { x: L, y: 4.6, w: 6, h: 0.6, fontSize: 20, bold: true });
   T(s, [
@@ -1852,23 +1847,22 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "그리�
 }
 {
   const s = pres.addSlide({ masterName: "COVER", sectionTitle: "Ch5 사례와 결정" });
-  s.addText("정리", { placeholder: "title" });
-  s.addText("이제 우리 조 사례로 직접 설계하고 돌려봅니다", { placeholder: "sub" });
+  T(s, "정리", { x: L, y: 0.54, w: 7.6, h: 0.73, fontSize: 44, bold: true, color: "FFFFFF" });
   T(s, [
     BR("1   랜덤 배정이 인과를 말할 수 있게 해 준다", { paraSpaceAfter: 14 }),
     BR("2   가설·OEC·가드레일·MDE는 실험 전에 정한다", { paraSpaceAfter: 14 }),
     R("3   결과는 구간으로 읽고, 배포 · 접기 · 재실험으로 닫는다"),
-  ], { x: 7.6, y: 2.6, w: 5.2, h: 3.0, fontSize: 15, color: "FFFFFF", bold: true });
+  ], { x: L, y: 3.17, w: 5.2, h: 1.5, fontSize: 15, color: "FFFFFF", bold: true });
   s.addNotes("세 가지만 기억하면 됩니다. 실습에서는 조마다 실제 기업 사례 하나를 골라, 같은 가상 모집단 위에서 제출한 설계대로 실험을 시뮬레이션합니다.");
 }
 // ---------- 복습 퀴즈 (답은 슬라이드에 넣지 않는다. 모범 답안은 위키 12편) ----------
 {
   const s = content("Ch5 사례와 결정", "복습 퀴즈 1 · 객관식", "결과를 보고 가장 먼저 해야 할 일은 무엇일까요?",
     "정답과 해설은 위키 12편에 있습니다. 1~2분 생각할 시간을 주고 손을 들어 답을 고르게 합니다.");
-  T(s, "50:50으로 설계한 실험에서 B안 전환율이 +3%p, p = 0.01로 나왔습니다", { x: L, y: 1.9, w: CW, h: 0.5, fontSize: 20 });
+  T(s, "50:50으로 설계한 실험에서 B안 전환율이 +3%p, p = 0.01로 나왔습니다.", { x: L, y: 1.9, w: CW, h: 0.5, fontSize: 20 });
   T(s, [R("그런데 실제로 들어온 사용자 수는  ", { fontSize: 15, color: C.text2 }),
     R("A 50,000명", { fontSize: 30, bold: true, color: C.accent1 }), R("   ", { fontSize: 30 }),
-    R("B 48,800명", { fontSize: 30, bold: true, color: C.accent3 }), R("  입니다", { fontSize: 15, color: C.text2 })],
+    R("B 48,800명", { fontSize: 30, bold: true, color: C.accent3 }), R("  입니다.", { fontSize: 15, color: C.text2 })],
   { x: L, y: 2.45, w: CW, h: 0.75 });
   T(s, "가장 먼저 해야 할 일로 옳은 것을 고르세요.", { x: L, y: 3.35, w: CW, h: 0.45, fontSize: 15, bold: true, color: C.accent1 });
   ["유의하므로 B안을 배포합니다", "표본이 충분하니 신뢰구간만 확인하고 배포합니다",
@@ -1882,7 +1876,7 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "그리�
 {
   const s = content("Ch5 사례와 결정", "복습 퀴즈 2 · 주관식", "이 기능의 실험을 직접 설계해 보세요",
     "모범 답안과 채점 포인트는 위키 12편에 있습니다. 조별로 5분 정도 토의하고 한두 조가 발표합니다.");
-  T(s, [R("중고거래 앱에서 "), R("판매자에게 적정 가격을 추천하는 기능", { bold: true, color: C.accent1 }), R("을 실험하려고 합니다")],
+  T(s, [R("중고거래 앱에서 "), R("판매자에게 적정 가격을 추천하는 기능", { bold: true, color: C.accent1 }), R("을 실험하려고 합니다.")],
     { x: L, y: 1.9, w: CW, h: 0.5, fontSize: 20 });
   T(s, "아래 세 가지 질문에 답하세요.", { x: L, y: 2.5, w: CW, h: 0.45, fontSize: 15, bold: true, color: C.accent1 });
   [["가설", "한 문장으로 써 보세요"], ["지표", "Primary 지표와 Guardrail 지표를 하나씩 정해 보세요"],
