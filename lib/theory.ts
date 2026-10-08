@@ -89,7 +89,7 @@ export const FIELD_THEORY: Record<string, TheoryKey> = {
   ctr_analysis_unit: "analysis_unit", analysis_population: "trigger", assignment_timing: "trigger",
   alpha: "alpha_power", power: "alpha_power", mde_pp: "mde", mde_pct: "mde",
   duration_days: "duration", duration_weeks: "duration", il_days: "duration", abn_weeks: "duration",
-  stopping: "peeking", ramp: "ramp_up", exclude_first_week: "novelty", include_ramp_days: "ramp_up",
+  stopping: "peeking", ramp: "ramp_up", exclude_first_week: "novelty", analysis_mode: "simpson",
   cuped: "cuped", correction: "multiple_testing",
   run_aa_first: "aa_test", rerun_aa: "aa_test", aa_days: "aa_test",
   trigger_logging: "trigger", il_credit: "goodhart", arms: "ab_n", qualitative_weight: "data_informed", hours_treatment: "tail_metric", salt: "hashing",

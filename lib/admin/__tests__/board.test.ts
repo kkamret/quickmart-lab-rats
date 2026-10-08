@@ -10,7 +10,7 @@ const hyp = { action: "안내해요", behavior: "바로 주문해요", impact: "
 const p1 = (over: Record<string, unknown> = {}) => ({
   phase: "p1", hypothesis: hyp, scope: { os: "android", surface: "store_home" }, unit: "user",
   metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov"] },
-  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", include_ramp_days: true,
+  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled",
   stopping: "fixed", count_basis: "assignment", ...over,
 });
 

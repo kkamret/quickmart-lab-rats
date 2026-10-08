@@ -14,7 +14,7 @@ type D = Record<string, unknown>;
 const p1 = (over: D = {}): D => ({
   phase: "p1", hypothesis: hyp, scope: { os: "android", surface: "store_home" }, unit: "user",
   metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov"] },
-  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", include_ramp_days: true,
+  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled",
   stopping: "fixed", count_basis: "assignment", ...over,
 });
 const p2 = (over: D = {}): D =>
@@ -166,7 +166,7 @@ describe("배민 검증 시나리오", () => {
 
   it("#12 simpson_demo: 합산하면 B 우세, 주차별로 보면 B 열세", () => {
     const r = simulateBaemin(
-      p1({ ramp: "10_week1_50_week2", include_ramp_days: true, metrics: { primary: "conv", guardrails: ["abandon"], secondary: [] } }),
+      p1({ ramp: "10_week1_50_week2", analysis_mode: "pooled", metrics: { primary: "conv", guardrails: ["abandon"], secondary: [] } }),
       { mode: "simpson_demo" },
     );
     expect(cmp(r, "conv").d).toBeGreaterThan(0);
@@ -237,12 +237,12 @@ describe("설계 검증과 규칙", () => {
     expect(fp / 2000).toBeGreaterThan(0.03);
   }, 60000);
 
-  it("램프업 구간 제외 옵션은 1~2일을 분석에서 뺀다", () => {
-    const incl = simulateBaemin(p1({ ramp: "10_50_100", include_ramp_days: true }));
-    const excl = simulateBaemin(p1({ ramp: "10_50_100", include_ramp_days: false }));
-    expect(excl.srm!.counts[0]).toBeLessThan(incl.srm!.counts[0]);
-    // 1일차는 B 효과가 10% 만 보이므로 포함하면 효과가 희석돼 보인다
-    expect(Math.abs(cmp(excl, "abandon").d)).toBeGreaterThan(Math.abs(cmp(incl, "abandon").d) * 0.9);
+  it("램프업 일차를 분석에서 빼는 옵션은 없다: 분석 방식과 상관없이 모든 일차를 쓴다", () => {
+    const pooled = simulateBaemin(p1({ ramp: "10_50_100", analysis_mode: "pooled" }));
+    const strat = simulateBaemin(p1({ ramp: "10_50_100", analysis_mode: "stratified" }));
+    expect(pooled.srm!.counts).toEqual(strat.srm!.counts);
+    expect(pooled.periods).toHaveLength(14);
+    expect(pooled.stoppedAt).toBe(14);
   });
 
   it("P3 coupon_ops=high 에서만 쿠폰 비용이 보이고, 트리거가 늘어 검정력이 오른다", () => {
@@ -337,5 +337,46 @@ describe("페이지뷰 단위", () => {
     };
     // 단위가 효과를 줄이는 것(×0.3)과 별개로, 이전 구현의 +0.1%p 가산은 없어야 한다(차이 < 0.05%p)
     expect(crashRate(pv)).toBeCloseTo(crashRate(user), 3);
+  });
+});
+
+describe("분석 방식(analysis_mode)", () => {
+  const simpsonDesign = (mode: "pooled" | "stratified") =>
+    p1({ ramp: "10_week1_50_week2", analysis_mode: mode, metrics: { primary: "conv", guardrails: ["abandon"], secondary: [] } });
+
+  it("배정 비율이 바뀌는 램프: 합쳐서 분석하면 B 우세, 같은 비율끼리 나눠 합치면 주차별 방향(B 열세)과 같다", () => {
+    const pooled = simulateBaemin(simpsonDesign("pooled"), { mode: "simpson_demo" });
+    const strat = simulateBaemin(simpsonDesign("stratified"), { mode: "simpson_demo" });
+    expect(cmp(pooled, "conv").d).toBeGreaterThan(0);
+    expect(cmp(strat, "conv").d).toBeLessThan(0);
+    expect(cmp(strat, "conv").method).toContain("층화");
+    expect(cmp(pooled, "conv").method).not.toContain("층화");
+  });
+
+  it("SIMPSON_RISK 는 배정 비율이 달라진 기간을 합쳐서 분석했을 때만 붙는다", () => {
+    const pooled = simulateBaemin(simpsonDesign("pooled"), { mode: "simpson_demo" });
+    const strat = simulateBaemin(simpsonDesign("stratified"), { mode: "simpson_demo" });
+    expect(pooled.flags).toContain("SIMPSON_RISK");
+    expect(strat.flags).not.toContain("SIMPSON_RISK");
+    // 7일이면 한 주(층 하나)뿐이라 합산 왜곡이 없다
+    const week1 = simulateBaemin(p1({ ramp: "10_week1_50_week2", duration_days: 7, analysis_mode: "pooled" }), { mode: "simpson_demo" });
+    expect(week1.flags).not.toContain("SIMPSON_RISK");
+  });
+
+  it("배정 비율이 일정한 램프(none, 10_50_100)에서는 두 방식의 결과가 같다", () => {
+    for (const ramp of ["none", "10_50_100"]) {
+      const a = simulateBaemin(p1({ ramp, analysis_mode: "pooled" }), { withTruth: false });
+      const b = simulateBaemin(p1({ ramp, analysis_mode: "stratified" }), { withTruth: false });
+      expect(JSON.stringify(b.metrics)).toBe(JSON.stringify(a.metrics));
+      expect(b.flags).toEqual(a.flags);
+    }
+  });
+
+  it("analysis_mode 를 생략하면 pooled 로 읽는다(이전 제출 호환)", () => {
+    const d = p1();
+    delete (d as Record<string, unknown>).analysis_mode;
+    const v = validateDesign(d);
+    expect(v.ok).toBe(true);
+    if (v.ok) expect(v.design.analysis_mode).toBe("pooled");
   });
 });

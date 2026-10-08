@@ -15,7 +15,7 @@ const blankP1 = (): Obj => ({
   duration_days: 7,
   allocation: 1,
   ramp: "none",
-  include_ramp_days: true,
+  analysis_mode: "pooled",
   count_basis: "assignment",
 });
 

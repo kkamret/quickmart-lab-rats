@@ -25,7 +25,8 @@ const common = {
   /** 범위 트래픽 중 실험에 투입하는 비율 */
   allocation: z.number().min(0.05).max(1),
   ramp: z.enum(["none", "10_50_100", "10_week1_50_week2"]),
-  include_ramp_days: z.boolean(),
+  /** pooled: 기간을 합쳐서 분석 / stratified: 배정 비율이 같은 기간(층)별로 비교한 뒤 합쳐서 분석 */
+  analysis_mode: z.enum(["pooled", "stratified"]).default("pooled"),
   stopping: z.enum(["fixed", "peek_stop", "sequential"]),
   count_basis: z.enum(["assignment", "exposure"]),
   /** A/A 모드: 진짜 효과를 0 으로 둔다(s3 의 A/A 실행) */

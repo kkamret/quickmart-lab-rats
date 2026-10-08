@@ -62,7 +62,13 @@ const common: FieldMeta[] = [
       { value: "10_week1_50_week2", label: "1주차 B 10% → 2주차 B 50% 배정" },
     ],
   },
-  { name: "include_ramp_days", label: "램프업 기간도 분석에 포함", help: "끄면 램프업 구간을 빼고 분석해요.", type: "boolean" },
+  {
+    name: "analysis_mode", label: "분석 방식", help: "램프업처럼 기간마다 A:B 배정 비율이 달라질 수 있어요. 기간을 합쳐서 볼지, 배정 비율이 같은 기간끼리 나눠 본 뒤 합칠지 골라요.", type: "select",
+    options: [
+      { value: "pooled", label: "전체 기간을 합쳐서 분석" },
+      { value: "stratified", label: "배정 비율이 같은 기간끼리 나눠 비교한 뒤 합쳐서 분석" },
+    ],
+  },
   {
     name: "stopping", label: "중간 확인 규칙", type: "select",
     options: [

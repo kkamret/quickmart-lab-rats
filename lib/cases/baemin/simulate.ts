@@ -4,7 +4,7 @@
  */
 import { SimulationRejected } from "../types";
 import {
-  binomialCount, crnZ, designHash, groupMean, meanTest, obfBoundary, powerMean, powerProp, propTest, sigFlags, srm,
+  binomialCount, combineStrata, crnZ, designHash, groupMean, meanTest, obfBoundary, powerMean, powerProp, propTest, sigFlags, srm,
   ssMean, ssProp,
   type Arm, type Comparison, type Flag, type MetricResult, type PeriodRow, type Readout,
 } from "@/lib/sim/core";
@@ -83,12 +83,20 @@ function armShares(d: Design, arms: Arm[], day: number): Record<string, number> 
 /** 10_50_100: B 에 배정된 사용자 중 실제로 바를 보는 비율(나머지는 대조군처럼 행동) */
 const exposure = (d: Design, day: number) => (d.ramp === "10_50_100" ? (day === 1 ? 0.1 : day === 2 ? 0.5 : 1) : 1);
 
-/** 램프 구간으로 분석에서 뺄 일차들 */
-function excludedDays(d: Design): (day: number) => boolean {
-  if (d.include_ramp_days) return () => false;
-  if (d.ramp === "10_50_100") return (day) => day <= 2;
-  if (d.ramp === "10_week1_50_week2" && d.duration_days > 7) return (day) => day <= 7;
-  return () => false;
+const sameShares = (a: Record<string, number>, b: Record<string, number>) =>
+  Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((k) => k in b && Math.abs(a[k] - b[k]) < 1e-9);
+
+/** 계획 배정비가 같은 연속 일차끼리 묶는다(층). 층화 분석과 SIMPSON_RISK 판단에 쓴다. */
+export function strataOf(shares: Record<string, number>[], days: number[]): number[][] {
+  const out: number[][] = [];
+  let prev: Record<string, number> | null = null;
+  for (const day of days) {
+    const cur = shares[day - 1];
+    if (prev && sameShares(prev, cur)) out[out.length - 1].push(day);
+    else out.push([day]);
+    prev = cur;
+  }
+  return out;
 }
 
 export function validateDesign(input: unknown): { ok: true; design: Design } | { ok: false; message: string } {
@@ -287,9 +295,7 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   const { arms } = data;
   const seScale = UNIT_SE_SCALE[d.unit];
   const alpha = d.alpha;
-  const skip = excludedDays(d);
-  let included = Array.from({ length: d.duration_days }, (_, i) => i + 1).filter((day) => !skip(day));
-  if (included.length === 0) included = Array.from({ length: d.duration_days }, (_, i) => i + 1);
+  const included = Array.from({ length: d.duration_days }, (_, i) => i + 1);
   const K = included.length;
   const primary = d.metrics.primary;
   const treat = arms.filter((a) => a !== "A");
@@ -331,6 +337,18 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     metricList.push({ key, role, stats });
   }
 
+  // 층: 계획 배정비가 같은 연속 일차. stratified 이고 층이 둘 이상일 때만 층별로 비교해 합친다.
+  const strata = strataOf(data.shares, win);
+  const useStrata = d.analysis_mode === "stratified" && strata.length > 1;
+  const stratifiedCompare = (key: MetricKey, arm: Arm) => {
+    const parts = strata.flatMap((days) => {
+      const sa = statOf(key, armAgg("A", "all", days));
+      const sb = statOf(key, armAgg(arm, "all", days));
+      return sa.n === 0 || sb.n === 0 ? [] : [compare(key, sa, sb, alpha, seScale)];
+    });
+    return parts.length ? combineStrata(parts, alpha) : null;
+  };
+
   // 비교(처치군 vs 대조군)와 다중검정 보정
   type Pending = { mi: number; arm: Arm; r: ReturnType<typeof compare> };
   const pending: Pending[] = [];
@@ -339,7 +357,8 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     for (const arm of treat) {
       const sb = m.stats[arm];
       if (!sa || !sb || sa.n === 0 || sb.n === 0) continue;
-      pending.push({ mi, arm, r: compare(m.key, sa, sb, alpha, seScale) });
+      const r = useStrata ? stratifiedCompare(m.key, arm) : compare(m.key, sa, sb, alpha, seScale);
+      if (r) pending.push({ mi, arm, r });
     }
   });
   const correction = d.phase === "p4" ? d.correction : "none";
@@ -351,7 +370,7 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     sig = sigFlags(pending.map((p) => p.r.p), alpha, correction);
   }
   const method = (m: MetricKey) =>
-    `${METRICS[m].type === "prop" ? "비율 z 검정" : "평균 t(z) 검정"}${d.stopping === "sequential" ? " · 순차(OBF)" : ""}${correction !== "none" ? ` · ${correction === "bh" ? "BH" : "Bonferroni"} 보정` : ""}${d.unit !== "user" ? ` · ${d.unit} 단위 SE` : ""}`;
+    `${METRICS[m].type === "prop" ? "비율 z 검정" : "평균 t(z) 검정"}${d.stopping === "sequential" ? " · 순차(OBF)" : ""}${correction !== "none" ? ` · ${correction === "bh" ? "BH" : "Bonferroni"} 보정` : ""}${d.unit !== "user" ? ` · ${d.unit} 단위 SE` : ""}${useStrata ? " · 층화(배정 비율이 같은 기간별) 합산" : ""}`;
 
   const metrics: MetricResult[] = metricList.map((m, mi) => {
     const comparisons: Comparison[] = pending
@@ -498,7 +517,7 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   if (win.length < 14) flags.push("SHORT_DURATION");
   if (achievedPower !== undefined && achievedPower < 0.5) flags.push("UNDERPOWERED");
   if (d.stopping === "peek_stop") flags.push("PEEKED");
-  if (d.ramp === "10_week1_50_week2" && d.include_ramp_days) flags.push("SIMPSON_RISK");
+  if (d.ramp === "10_week1_50_week2" && d.analysis_mode === "pooled" && strata.length > 1) flags.push("SIMPSON_RISK");
   if (correction === "none" && pending.length >= 10) flags.push("MULTIPLE_TESTING");
   if (d.phase === "p3" && !d.trigger_logging) flags.push("SELECTION_BIAS");
 
