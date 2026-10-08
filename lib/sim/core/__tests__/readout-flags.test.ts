@@ -13,9 +13,9 @@ const readout: Readout = {
 };
 
 describe("flags", () => {
-  it("공통 15개 + 사례 전용 4개, 라벨이 모두 있다", () => {
+  it("공통 15개 + 사례 전용 3개, 라벨이 모두 있다", () => {
     expect(COMMON_FLAGS).toHaveLength(15);
-    expect(CASE_FLAGS).toHaveLength(4);
+    expect(CASE_FLAGS).toHaveLength(3);
     for (const f of ALL_FLAGS) expect(FLAG_LABELS[f]).toBeTruthy();
     expect(new Set(ALL_FLAGS).size).toBe(ALL_FLAGS.length);
   });

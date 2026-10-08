@@ -20,8 +20,8 @@ export const COMMON_FLAGS = [
   "NOVELTY",
 ] as const;
 
-/** 사례 문서에서 따로 정의한 플래그: 배민 FLICKER, 당근 GOODHART(+넷플릭스 공용) · CARRYOVER */
-export const CASE_FLAGS = ["FLICKER", "GOODHART", "CARRYOVER", "STAKEHOLDER_EVENT"] as const;
+/** 사례 문서에서 따로 정의한 플래그: 당근 GOODHART(+넷플릭스 공용) · CARRYOVER */
+export const CASE_FLAGS = ["GOODHART", "CARRYOVER", "STAKEHOLDER_EVENT"] as const;
 
 export const ALL_FLAGS = [...COMMON_FLAGS, ...CASE_FLAGS] as const;
 export type Flag = (typeof ALL_FLAGS)[number];
@@ -42,7 +42,6 @@ export const FLAG_LABELS: Record<Flag, string> = {
   CONTAMINATION: "그룹 오염",
   INSTRUMENTATION: "계측 문제",
   NOVELTY: "신규성 효과",
-  FLICKER: "깜빡임 렌더링",
   GOODHART: "지표 정의의 함정(굿하트)",
   CARRYOVER: "이전 실험의 이월 효과",
   STAKEHOLDER_EVENT: "서비스 담당자 사전 합의 누락(반발 이벤트)",

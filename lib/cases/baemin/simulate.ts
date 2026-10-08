@@ -202,7 +202,7 @@ function generate(d: Design, o: Required<Pick<SimOptions, "seed" | "noise" | "mo
 
         let cartP = cartBase;
         let abP = abBase + eff.abandon;
-        let crashP = CRASH[seg.os] + eff.crash + (d.unit === "pageview" && arm !== "A" ? 0.001 : 0);
+        let crashP = CRASH[seg.os] + eff.crash;
         if (bug && arm !== "A" && seg.os === "ios_old") {
           if (d.count_basis === "exposure") {
             // 첫 화면 로그 전에 크래시한 사용자가 B 에서 사라진다(SRM). 남은 사용자는 생존자 편향.
@@ -495,7 +495,6 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   const flags: Flag[] = [];
   if (srmRes.p < 0.001) flags.push("SRM");
   if (d.unit !== "user") flags.push("UNIT_MISMATCH");
-  if (d.unit === "pageview") flags.push("FLICKER");
   if (win.length < 14) flags.push("SHORT_DURATION");
   if (achievedPower !== undefined && achievedPower < 0.5) flags.push("UNDERPOWERED");
   if (d.stopping === "peek_stop") flags.push("PEEKED");

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { SimulationRejected } from "../../types";
-import { toTeamView, type Readout } from "@/lib/sim/core";
+import { ALL_FLAGS, toTeamView, type Readout } from "@/lib/sim/core";
 import { baeminPlugin, simulateBaemin, validateDesign } from "../index";
 import { SEED } from "../population";
 
@@ -317,5 +317,25 @@ describe("플러그인 인터페이스", () => {
     const r = baeminPlugin.simulate("p1_run", p1() as never, { prior: {} });
     expect(r.phase).toBe("p1");
     expect(() => baeminPlugin.simulate("diagnose", p1() as never, { prior: {} })).toThrow(SimulationRejected);
+  });
+});
+
+describe("페이지뷰 단위", () => {
+  it("깜빡임(FLICKER) 장치는 없다: 페이지뷰는 UNIT_MISMATCH 만 붙는다", () => {
+    expect(ALL_FLAGS as readonly string[]).not.toContain("FLICKER");
+    const r = simulateBaemin(p1({ unit: "pageview" }));
+    expect(r.flags).toContain("UNIT_MISMATCH");
+    expect(r.flags as string[]).not.toContain("FLICKER");
+  });
+
+  it("페이지뷰 단위가 크래시율을 따로 올리지 않는다(이론 근거 없음)", () => {
+    const user = simulateBaemin(p1({ unit: "user" }), { withTruth: false });
+    const pv = simulateBaemin(p1({ unit: "pageview" }), { withTruth: false });
+    const crashRate = (r: Readout) => {
+      const m = metric(r, "crash");
+      return (m.arms.B!.x ?? 0) / m.arms.B!.n;
+    };
+    // 단위가 효과를 줄이는 것(×0.3)과 별개로, 이전 구현의 +0.1%p 가산은 없어야 한다(차이 < 0.05%p)
+    expect(crashRate(pv)).toBeCloseTo(crashRate(user), 3);
   });
 });
