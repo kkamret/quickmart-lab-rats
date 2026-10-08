@@ -483,3 +483,22 @@ describe("플래그 규칙(이론 근거)", () => {
     expect(toTeamView(srm).panels._why).toBeUndefined();
   });
 });
+
+describe("루브릭·정답 해설 문구", () => {
+  const all = [...Object.values(baeminPlugin.rubric), ...Object.values(baeminPlugin.reveal)].join("\n");
+
+  it("이론에 없는 개념과 절대 기준을 쓰지 않는다", () => {
+    expect(all).not.toContain("홀드아웃");
+    expect(all).not.toContain("14일 이상");
+    expect(all).not.toContain("안드로이드 + 가게홈");
+    expect(all).not.toContain("사전 QA");
+  });
+
+  it("Phase 별 루브릭은 결정의 정오를 decision_checks 에 맡긴다", () => {
+    for (const phase of ["p1", "p2", "p3", "p4"]) expect(baeminPlugin.rubric[phase], phase).toContain("decision_checks");
+  });
+
+  it("P2 정답 해설은 iOS 구버전 에피소드를 램프업과 연결해 설명한다", () => {
+    expect(baeminPlugin.reveal.p2).toContain("램프업");
+  });
+});

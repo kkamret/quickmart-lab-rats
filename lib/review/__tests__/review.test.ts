@@ -4,7 +4,7 @@ import { simulateBaemin } from "@/lib/cases/baemin";
 import { ALL_FLAGS, FLAG_LABELS } from "@/lib/sim/core/flags";
 import { generateJson } from "../generate";
 import type { ReviewLLM } from "../llm";
-import { FLAG_NUDGES, leaksFlag, mockClassReview, mockTeamReview, scrubTeamReview, sharePrompt, summarizeSim, teamPrompt } from "../prompts";
+import { FLAG_NUDGES, inputHash, leaksFlag, mockClassReview, mockTeamReview, scrubTeamReview, sharePrompt, summarizeSim, teamPrompt, type TeamReviewInput } from "../prompts";
 import { COOLDOWN_MS, ReviewError, readShare, reviewClass, reviewShare, reviewTeam } from "../service";
 import { classReviewSchema, teamReviewSchema } from "../types";
 
@@ -243,5 +243,22 @@ describe("프롬프트 용어 (덱과 통일)", () => {
     expect(system).toContain("Primary");
     expect(system).toContain("Guardrail");
     expect(sharePrompt({ step: "design", teams: [] }).system).toContain("Primary");
+  });
+
+  it("결정 판정(decision_checks)이 있으면 프롬프트 입력에 그대로 실리고, 정답 공개 전에는 정답을 직접 말하지 말라고 지시한다", () => {
+    const input = {
+      case: "baemin", step: "s4_readout", rubric: "r", submission: {}, sim: null, revealed: false,
+      decision_checks: [{ phase: "p1", option: "배포", verdict: "correct", reason: "근거 문장" }],
+    } as TeamReviewInput;
+    const p = teamPrompt(input);
+    expect(p.user).toContain("decision_checks");
+    expect(p.user).toContain("근거 문장");
+    expect(p.system).toContain("decision_checks");
+  });
+
+  it("decision_checks 가 없는 입력의 해시는 이전과 같다(캐시 호환)", () => {
+    const a = { case: "baemin", step: "s2_design", rubric: "r", submission: {}, sim: null, revealed: false } as TeamReviewInput;
+    expect(inputHash(a)).toBe(inputHash({ ...a }));
+    expect(JSON.stringify(a)).not.toContain("decision_checks");
   });
 });
