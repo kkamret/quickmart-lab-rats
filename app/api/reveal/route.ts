@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { fail, parseBody } from "@/lib/api";
 import { normalizeClassCode } from "@/lib/class-code";
 import { getPlugin } from "@/lib/cases/registry";
-import { buildReveal, type RunRow } from "@/lib/reveal";
+import { buildReveal, latestDecisionPicks, type RunRow } from "@/lib/reveal";
 import { teamScopedBody } from "@/lib/schemas";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -18,6 +18,10 @@ export async function POST(req: Request) {
   if (!team) return fail("이 수업에 속한 조가 아니에요.", 404);
   const plugin = getPlugin(team.case_key);
   if (!plugin) return fail("먼저 사례를 골라주세요.", 409);
-  const { data: runs } = await db.from("sim_runs").select("team_id, phase, design, result, created_at").eq("team_id", team.id);
-  return NextResponse.json(buildReveal(plugin, (runs ?? []) as RunRow[], team.id));
+  const [{ data: runs }, { data: subs }] = await Promise.all([
+    db.from("sim_runs").select("team_id, phase, design, result, created_at").eq("team_id", team.id),
+    db.from("submissions").select("phase, version, payload").eq("team_id", team.id).eq("kind", "decision"),
+  ]);
+  const picks = latestDecisionPicks((subs ?? []) as { phase: string; version: number; payload: Record<string, unknown> }[]);
+  return NextResponse.json(buildReveal(plugin, (runs ?? []) as RunRow[], team.id, picks));
 }
