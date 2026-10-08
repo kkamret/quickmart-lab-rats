@@ -81,10 +81,132 @@ const T = (s, text, o) =>
 const R = (text, o = {}) => ({ text, options: o });
 const BR = (text, o = {}) => ({ text, options: { ...o, breakLine: true } });
 
+const TOPICS = {
+  "00": { kicker: "먼저 읽기 · 기초용어" },
+  "01": { kicker: "01 · 왜 A/B 테스트를 하는가" },
+  "02": { kicker: "02 · 문제 정의와 가설 수립" },
+  "03": { kicker: "03 · 지표 설계" },
+  "04": { kicker: "04 · 실험 단위 결정" },
+  "05": { kicker: "05 · 실제 실험 운영 설계" },
+  "06": { kicker: "06 · 간섭 문제" },
+  "07": { kicker: "07 · 간섭 문제의 해결" },
+  "08": { kicker: "08 · 윤리 문제" },
+  "09": { kicker: "09 · 실험 실행과 결과 해석" },
+  "10": { kicker: "10 · 실무 함정과 대응" },
+  "11": { kicker: "11 · 실험 플랫폼과 데이터 기반 문화" },
+  "12": { kicker: "12 · 복습 퀴즈" },
+  reference: { kicker: "참고자료" },
+};
+
+const HYPOTHESIS_TITLES = new Set([
+  "현상이 아니라 문제에서 시작한다", "해결책은 여러 개, 실험에서 바꾸는 건 하나", "가설은 한 문장으로 쓴다",
+  "틀렸다는 결과도 나올 수 있어야 좋은 가설이다", "제품 가설을 통계적 가설로 바꾼다",
+  "단측검정은 결과를 보기 전에 정한다", "'나빠지지 않았다'는 비열등성 검정으로 말한다",
+]);
+const METRIC_TITLES = new Set([
+  "지표는 층으로 설계하고, 순서대로 읽는다", "좋은 OEC는 지금 잴 수 있고, 장기 목표를 가리킨다",
+  "노스스타는 방향을, OEC는 이번 실험을 판단한다", "Primary는 정의까지 정해야 쓸 수 있다",
+  "Driver 지표는 Primary가 움직인 경로를 보여준다", "CTR이 올랐다: 더 눌러서인가, 덜 보여줘서인가",
+  "가드레일은 개선 대상이 아니라 침범 금지선이다", "지표는 목표가 아니라 가치를 대신 재는 숫자다",
+  "지표와 판단 기준은 실험 전에 적어 둔다",
+]);
+const UNIT_TITLES = new Set([
+  "사용자 단위에서 시작하고, 다른 단위는 이유를 댄다", "식별자는 사람의 근사치다",
+  "사람을 계속 알아보기 어렵다면 세션 단위를 쓴다", "효과를 받을 수 있는 사람만 분석에 넣는다",
+]);
+const OPERATIONS_TITLES = new Set([
+  "실험이 틀리는 두 가지 방식", "MDE를 절반으로 줄이면 필요한 사용자는 4배",
+  "α와 Power를 엄격하게 잡을수록 실험은 길어진다", "MDE는 통계가 아니라 비즈니스가 정한다",
+  "단순 배정, 층화 배정, 해싱 배정", "50:50이 가장 효율적이고, 90:10은 위험 관리용이다",
+]);
+const PITFALL_TITLES = new Set([
+  "실무에서 자주 밟는 여섯 가지 함정", "중간에 봐야 한다면, 봐도 되는 방법으로 본다",
+  "세그먼트마다 이기는데 전체로는 진다", "결과보다 배정 비율을 먼저 본다", "측정이 흔들리면 결과도 흔들린다",
+]);
+
+function topicFor(sec, title) {
+  if (title === "오늘의 목표" || title === "목차") return "opening";
+  if (title === "먼저 용어를 맞춘다") return "00";
+  if (sec === "Ch1 실험과 인과추론") return "01";
+  if (HYPOTHESIS_TITLES.has(title)) return "02";
+  if (METRIC_TITLES.has(title)) return "03";
+  if (title === "실험 대상은 출시 대상을 닮아야 한다") return "01";
+  if (UNIT_TITLES.has(title)) return "04";
+  if (OPERATIONS_TITLES.has(title)) return "05";
+  if (title === "내 처치가 남의 결과를 바꾸면 안 된다" || title.startsWith("간섭은") || title.startsWith("간섭이 있으면")) return "06";
+  if (title.startsWith("간섭을 줄이려면") || title === "목적이 다르면 실험 방식도 다르다" || title.startsWith("실험 없이 인과를")) return "07";
+  if (title.startsWith("측정할 수 있는가와")) return "08";
+  if (sec === "Ch3 실행과 분석" || title.startsWith("'유의하다'에서") || title.startsWith("효과 크기 ×")) return "09";
+  if (PITFALL_TITLES.has(title)) return "10";
+  if (title.startsWith("결과를 보고") || title.startsWith("이 기능의 실험을")) return "12";
+  if (title === "Reference") return "reference";
+  if (sec === "Ch5 사례와 결정") return "11";
+  throw new Error(`위키 순서를 지정하지 않은 슬라이드: ${sec} / ${title}`);
+}
+
+const TITLE_COPY = {
+  "목차": "위키 순서",
+  "그냥 배포하고 보면 안 되나?": "전후 비교만으로는 효과를 판단할 수 없다",
+  "먼저 용어를 맞춘다": "A/B 테스트 기초용어",
+  "A/B 테스트는 일곱 단계로 돌아간다": "A/B 테스트의 기본 절차",
+  "현상이 아니라 문제에서 시작한다": "실험의 출발점은 문제 정의다",
+  "해결책은 여러 개, 실험에서 바꾸는 건 하나": "한 실험에서는 핵심 변화 하나만 검증한다",
+  "가설은 한 문장으로 쓴다": "검증 가능한 가설의 구조",
+  "틀렸다는 결과도 나올 수 있어야 좋은 가설이다": "좋은 가설의 조건",
+  "제품 가설을 통계적 가설로 바꾼다": "제품 가설과 통계적 가설",
+  "단측검정은 결과를 보기 전에 정한다": "단측검정과 양측검정",
+  "'나빠지지 않았다'는 비열등성 검정으로 말한다": "비열등성 검정",
+  "지표는 층으로 설계하고, 순서대로 읽는다": "지표 체계와 해석 순서",
+  "좋은 OEC는 지금 잴 수 있고, 장기 목표를 가리킨다": "OEC 설계 원칙",
+  "노스스타는 방향을, OEC는 이번 실험을 판단한다": "North Star Metric과 OEC",
+  "Primary는 정의까지 정해야 쓸 수 있다": "Primary Metric의 정의",
+  "Driver 지표는 Primary가 움직인 경로를 보여준다": "Secondary Metric과 Driver Metric",
+  "CTR이 올랐다: 더 눌러서인가, 덜 보여줘서인가": "비율 지표의 구성 효과",
+  "가드레일은 개선 대상이 아니라 침범 금지선이다": "Guardrail Metric의 역할",
+  "지표는 목표가 아니라 가치를 대신 재는 숫자다": "Goodhart's Law",
+  "지표와 판단 기준은 실험 전에 적어 둔다": "지표와 판단 기준의 사전 정의",
+  "사용자 단위에서 시작하고, 다른 단위는 이유를 댄다": "실험 단위 선택",
+  "식별자는 사람의 근사치다": "사용자 식별자의 한계",
+  "사람을 계속 알아보기 어렵다면 세션 단위를 쓴다": "Session-level Randomization",
+  "효과를 받을 수 있는 사람만 분석에 넣는다": "트리거 분석",
+  "실험이 틀리는 두 가지 방식": "1종 오류와 2종 오류",
+  "α와 Power를 엄격하게 잡을수록 실험은 길어진다": "유의수준과 검정력이 실험 규모에 미치는 영향",
+  "MDE는 통계가 아니라 비즈니스가 정한다": "MDE 결정 기준",
+  "단순 배정, 층화 배정, 해싱 배정": "무작위 배정 방식",
+  "50:50이 가장 효율적이고, 90:10은 위험 관리용이다": "배정 비율과 실험 효율",
+  "내 처치가 남의 결과를 바꾸면 안 된다": "SUTVA와 간섭",
+  "A/A로 점검하고, 조금씩 늘리고, 충분히 돌린다": "실험 실행 순서",
+  "같은 것끼리 비교해서 시스템을 먼저 검증한다": "A/A 테스트",
+  "최소 1~2주, 요일과 신기효과를 넘겨서": "실험 기간 결정",
+  "검정은 지표의 모양을 보고 고른다": "지표 유형에 따른 통계 검정",
+  "p-value를 말하는 법": "p-value 해석",
+  "점추정 대신 구간으로 말한다": "신뢰구간 해석",
+  "통계적으로 유의하다 ≠ 의미 있다": "통계적 유의성과 실질적 유의성",
+  "실무에서 자주 밟는 여섯 가지 함정": "실험 결과를 왜곡하는 주요 함정",
+  "중간에 봐야 한다면, 봐도 되는 방법으로 본다": "Sequential Testing",
+  "세그먼트마다 이기는데 전체로는 진다": "심슨의 역설",
+  "결과보다 배정 비율을 먼저 본다": "Sample Ratio Mismatch",
+  "측정이 흔들리면 결과도 흔들린다": "실험을 오염시키는 데이터 편향",
+  "간섭은 두 경로로 생긴다": "직접 간섭과 간접 간섭",
+  "간섭이 있으면 실험 결과가 이렇게 흔들린다": "간섭이 실험 결과에 미치는 영향",
+  "간섭을 줄이려면 나누는 단위를 다시 설계한다": "간섭 문제의 해결 방법",
+  "측정할 수 있는가와 해도 되는가는 다른 질문이다": "A/B 테스트의 윤리 문제",
+  "목적이 다르면 실험 방식도 다르다": "목적에 따른 실험 설계",
+  "실험 없이 인과를 추정하는 세 가지 방법": "실험이 어려울 때의 인과추론 방법",
+  "실험을 잘하는 회사들이 오늘 개념을 어떻게 쓰나": "기업의 실험 방법 사례",
+  "실험하는 조직의 세 가지 원칙": "온라인 통제 실험의 세 가지 원칙",
+  "실험 문화를 받치는 세 가지": "실험 문화의 기반",
+  "'유의하다'에서 멈추지 말고 결정으로 닫는다": "실험 결과에서 의사결정까지",
+};
+
 function content(sec, kicker, title, notes) {
   const s = pres.addSlide({ masterName: "CONTENT", sectionTitle: sec });
-  s.addText(kicker, { placeholder: "kicker" });
-  s.addText(title, { placeholder: "title" });
+  const topic = topicFor(sec, title);
+  const detail = kicker.includes(" · ") ? kicker.split(" · ").slice(1).join(" · ") : kicker;
+  s.addText(TOPICS[topic] ? `${TOPICS[topic].kicker} · ${detail}` : kicker, { placeholder: "kicker" });
+  s.addText(TITLE_COPY[title] || title, { placeholder: "title" });
+  s._deckTopic = topic;
+  s._deckTitle = TITLE_COPY[title] || title;
   if (notes) s.addNotes(notes);
   return s;
 }
@@ -167,6 +289,7 @@ function addReferenceSlides() {
 function section(sec, num, title, desc, notes) {
   pres.addSection({ title: sec });
   const s = pres.addSlide({ masterName: "SECTION", sectionTitle: sec });
+  s._deckTopic = "legacy-section";
   s.addText(num, { placeholder: "num" });
   s.addText(title, { placeholder: "title" });
   s.addText(desc, { placeholder: "desc" });
@@ -218,6 +341,7 @@ const SRC = (s, text, y = 6.55) => T(s, text, { x: L, y, w: CW, h: 0.3, fontSize
 pres.addSection({ title: "오프닝" });
 {
   const s = pres.addSlide({ masterName: "COVER", sectionTitle: "오프닝" });
+  s._deckTopic = "cover";
   s.addText("A/B 테스트\n설계 및 실습", { placeholder: "title" });
   s.addText("개선 아이디어를 검증 가능한 실험으로, 결과를 배포 결정으로", { placeholder: "sub" });
   T(s, "발표자: 25기 이정연, 25기 이유민", { x: L, y: 4.81, w: 5.0, h: 0.37, fontSize: 15, color: "FFFFFF" });
@@ -250,10 +374,10 @@ pres.addSection({ title: "오프닝" });
 }
 {
   const s = content("오프닝", "오프닝", "목차",
-    "Ch4의 함정은 개념만 소개하고, 직접 겪어보는 것은 뒤의 함정·해석·공유 세션에서 합니다.");
+    "저장소 위키의 순서대로 진행합니다. 세부 편은 네 묶음으로 나눠 전체 흐름을 먼저 보여 줍니다.");
   const ch = [
-    ["Ch1", "실험과 인과추론"], ["Ch2", "설계의 핵심 구성요소"], ["Ch3", "실행과 통계 분석"],
-    ["Ch4", "실무 함정과 고급 설계"], ["Ch5", "사례·문화·의사결정"],
+    ["00-01", "기초용어와 실험의 필요성"], ["02-05", "가설·지표·단위·운영 설계"],
+    ["06-08", "간섭과 윤리"], ["09-12", "실행·함정·문화·복습"],
   ];
   const gap = 0.12, w = (CW - gap * (ch.length - 1)) / ch.length;
   let x = L;
@@ -405,7 +529,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
     [b("실험군 (Treatment)"), "새 변경사항을 적용한 버전", "가능하면 핵심 변화 하나만 담는다"],
     [b("변형군 (Variant)"), "실험에서 비교하는 각각의 사용자 경험", "A와 B를 모두 포함. A/B/n은 대조군 하나 + 실험군 여럿"],
     [b("무작위 배정 단위"), "변형군에 무작위로 배정되는 단위", "주로 사용자. 페이지·세션·사용일도 가능"],
-    [b("OEC"), "실험 성공을 판단하는 전체 평가 기준", "Ch2에서 자세히"],
+    [b("OEC"), "실험 성공을 판단하는 전체 평가 기준", "위키 03편에서 자세히"],
     [b("파라미터"), "통제할 수 있는 실험 변수", "요인(factor)이라고도 부른다"],
   ], { x: L, y: 1.95, w: CW, colW: [2.9, 4.2, 4.83], rowH: 0.6, fontSize: 15 });
   T(s, "같은 말: 온라인 통제 실험(Online Controlled Experiment), 분할 테스트, 버킷 테스트, 플라이트",
@@ -416,13 +540,13 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
     "위키 01편 3장의 기본 단계입니다. 사용자를 무작위로 서로 다른 변형군에 배정한 뒤 행동을 측정해 지표 차이를 비교합니다. "
     + "50:50은 가장 단순한 예이고 다른 비율도 가능합니다. 각 단계 아래에 오늘 어느 장에서 다루는지 표시했습니다.");
   const steps = [
-    ["목표와 지표 설정", "무엇을 개선할지, OEC와 주요 지표", "Ch2"],
-    ["가설 설정", "어떤 변화가 어떤 지표를 움직일지", "Ch2"],
-    ["대조군·실험군 설계", "기존 = A, 변경 = B", "Ch2"],
-    ["무작위 배정", "같은 사용자는 같은 그룹, 배정은 서로 독립", "Ch1 · Ch2"],
-    ["실행과 데이터 수집", "미리 정한 지표를 측정", "Ch3"],
-    ["분석과 비교", "차이가 우연인지 통계적으로 평가", "Ch3"],
-    ["결정과 반복", "적용 여부를 정하고, 가설을 고쳐 다음 실험", "Ch5"],
+    ["목표와 지표 설정", "무엇을 개선할지, OEC와 주요 지표", "위키 02·03편"],
+    ["가설 설정", "어떤 변화가 어떤 지표를 움직일지", "위키 02편"],
+    ["대조군·실험군 설계", "기존 = A, 변경 = B", "위키 01·04편"],
+    ["무작위 배정", "같은 사용자는 같은 그룹, 배정은 서로 독립", "위키 04·05편"],
+    ["실행과 데이터 수집", "미리 정한 지표를 측정", "위키 09편"],
+    ["분석과 비교", "차이가 우연인지 통계적으로 평가", "위키 09·10편"],
+    ["결정과 반복", "적용 여부를 정하고, 가설을 고쳐 다음 실험", "위키 09·11편"],
   ];
   const cw = 2.85, gx = 0.17;
   steps.forEach(([h, d, ch], i) => {
@@ -464,7 +588,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
 {
   const s = content("Ch1 실험과 인과추론", "Ch1 · 한계",
     "A/B 테스트가 안 되거나 조심해야 하는 상황",
-    "A/B 테스트가 만능은 아닙니다. 짧게 짚고 Ch4의 대안 설계로 연결합니다.");
+    "A/B 테스트가 만능은 아닙니다. 짧게 짚고 위키 07·08편의 대응과 대안 설계로 연결합니다.");
   const items = [
     ["윤리·법", "가격 차별, 해로울 수 있는 처치, 동의가 필요한 실험"],
     ["네트워크 효과", "친구·판매자·라이더가 엮여 한 그룹의 처치가 다른 그룹에 번짐"],
@@ -477,7 +601,7 @@ section("Ch1 실험과 인과추론", "01", "실험 설계의 기초와 인과�
     T(s, [BR(h, { bold: true, fontSize: 20 }), R(b, { fontSize: 15, color: C.text2 })],
       { x: x + 1.0, y: y + 0.05, w: 4.8, h: 1.3 });
   });
-  T(s, [R("→ Ch4 대안: ", { bold: true, color: C.accent1 }), R("클러스터 랜덤화, 스위치백, DID · RDD · Synthetic Control")],
+  T(s, [R("위키 07편과 연결  ", { bold: true, color: C.accent1 }), R("클러스터 랜덤화, 스위치백, DID · RDD · Synthetic Control")],
     { x: L, y: 5.75, w: CW, h: 0.5, fontSize: 15 });
 }
 
@@ -812,7 +936,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
 {
   const s = content("Ch2 설계 구성요소", "Ch2 · Guardrail Metric", "가드레일은 개선 대상이 아니라 침범 금지선이다",
     "위키 03편 2.4. 모든 지표를 가드레일로 두는 게 아니라, 이번 Treatment가 부작용을 낼 만한 핵심 영역을 고릅니다. "
-    + "실험이 제대로 돌았는지 보는 신뢰성 가드레일(SRM, 로그 누락)은 Ch3·Ch4에서 다룹니다.");
+    + "실험이 제대로 돌았는지 보는 신뢰성 가드레일(SRM, 로그 누락)은 위키 09·10편에서 다룹니다.");
   const groups = [
     ["사용자 경험", ["이탈률", "앱 삭제율", "알림 차단율"], C.accent4],
     ["제품 안정성", ["오류율", "Crash Rate", "페이지 로딩 시간"], C.accent5],
@@ -826,7 +950,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
     { x, y: 2.0, w: 2.8, h: 2.3, fontSize: 15, paraSpaceAfter: 6 });
   });
   T(s, [R("고르는 기준  ", { bold: true, color: C.accent1 }),
-    R("이번 Treatment가 부작용을 낼 만한 영역만 둡니다. 신뢰성 가드레일(SRM, 로그 누락)은 Ch3·Ch4에서")],
+    R("이번 Treatment가 부작용을 낼 만한 영역만 둡니다. 신뢰성 가드레일(SRM, 로그 누락)은 위키 09·10편에서 다룹니다")],
   { x: L, y: 4.75, w: CW, h: 0.7, fontSize: 15 });
   T(s, [R("실무에서 이렇게 말한다  ", { bold: true, color: C.accent1 }),
     R("\"전환율은 올랐지만 로딩 시간이 200ms 늘어서 배포는 보류합니다\"")], { x: L, y: 5.7, w: CW, h: 0.5, fontSize: 15 });
@@ -882,7 +1006,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
 {
   const s = content("Ch2 설계 구성요소", "Ch2 · 대조군·실험군과 대표성", "실험 대상은 출시 대상을 닮아야 한다",
     "랜덤 배정은 두 그룹을 서로 비슷하게 만들지만, 실험에 들어온 사람 전체가 실제 출시 대상을 대표하는지는 별개의 문제입니다. "
-    + "이것이 Ch1의 외적 타당성과 이어집니다.");
+    + "이것이 위키 01편의 외적 타당성과 이어집니다.");
   // 점: 출시 대상 vs 실험 대상 (일부만)
   seed = 11;
   const gap = 0.3;
@@ -920,7 +1044,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   T(s, [R("세션 단위를 고를 때 묻기  ", { bold: true, color: C.accent1 }),
     R("\"이 변화를 본 사용자가 다음 방문에서 행동이 달라질 가능성이 있는가?\"")], { x: L, y: 5.55, w: CW, h: 0.4, fontSize: 15 });
   T(s, [R("원칙  ", { bold: true, color: C.accent1 }),
-    R("User-level에서 시작, 다른 단위는 이유를 댈 수 있을 때만 · 배정 ≠ 분석 단위면 분산 보정 (Ch3)")],
+    R("User-level에서 시작, 다른 단위는 이유를 댈 수 있을 때만 · 배정 ≠ 분석 단위면 분산 보정 (위키 09편)")],
   { x: L, y: 6.0, w: CW, h: 0.7, fontSize: 14 });
 }
 {
@@ -1135,7 +1259,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
 {
   const s = content("Ch2 설계 구성요소", "Ch2 · SUTVA", "내 처치가 남의 결과를 바꾸면 안 된다",
     "SUTVA(Stable Unit Treatment Value Assumption)는 한 사용자의 결과가 다른 사용자의 배정에 영향을 받지 않는다는 가정입니다. "
-    + "양면 시장, 메신저, 배달처럼 사용자가 서로 엮인 서비스에서 자주 깨집니다. 해결책은 Ch4의 클러스터 랜덤화와 스위치백입니다.");
+    + "양면 시장, 메신저, 배달처럼 사용자가 서로 엮인 서비스에서 자주 깨집니다. 해결책은 위키 07편의 클러스터 랜덤화와 스위치백입니다.");
   // A·B 점 사이로 영향이 번지는 그림
   seed = 3;
   for (let i = 0; i < 12; i++) dot(s, L + (i % 3) * 0.45, 2.3 + Math.floor(i / 3) * 0.45, 0.2, HEX.blue);
@@ -1155,7 +1279,7 @@ section("Ch2 설계 구성요소", "02", "A/B 테스트 설계의 핵심 구성�
   T(s, ex.flatMap(([h, b], i) => [BR(h, { bold: true, fontSize: 20 }),
     i < ex.length - 1 ? BR(b, { fontSize: 15, color: C.text2, paraSpaceAfter: 12 }) : R(b, { fontSize: 15, color: C.text2 })]),
   { x: 5.6, y: 2.05, w: 7.0, h: 3.4 });
-  T(s, [R("→ Ch4: ", { bold: true, color: C.accent1 }), R("사용자 대신 동네·시간 구간을 나눈다 (클러스터 랜덤화, 스위치백)")],
+  T(s, [R("위키 07편과 연결  ", { bold: true, color: C.accent1 }), R("사용자 대신 동네·시간 구간을 나눈다 (클러스터 랜덤화, 스위치백)")],
     { x: L, y: 5.75, w: CW, h: 0.5, fontSize: 15 });
 }
 
@@ -1422,7 +1546,7 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "A/A, �
     BR("매일 확인할 때 14일 누적 거짓 양성 (마지막 날만 보면 5.2%)", { fontSize: 15, color: C.text2, paraSpaceAfter: 16 }),
     BR("처방", { bold: true, fontSize: 15 }),
     BR("종료일과 표본 크기를 미리 정한다", { bullet: true, fontSize: 15 }),
-    R("중간에 봐야 하면 Sequential Testing (Ch4)", { bullet: true, fontSize: 15 }),
+    R("중간에 봐야 하면 Sequential Testing을 사용한다 (위키 10편)", { bullet: true, fontSize: 15 }),
   ], { x: 8.8, y: 1.9, w: 3.8, h: 4.4 });
   SRC(s, "A/A 시뮬레이션 4,000회 · 그룹당 하루 1,000명 · 전환율 10% · 두 비율 z-test · 시드 42 (교육용)");
 }
@@ -1460,7 +1584,7 @@ section("Ch3 실행과 분석", "03", "실험 실행과 통계 분석", "A/A, �
   const rules = [
     ["실험 시작 후 일차별로 본다", "전체 평균 하나 대신 1~3일차, 4~7일차, 8~14일차 추이를 함께 본다", "경과 일수는 두 그룹에 똑같이 적용돼 랜덤 비교가 유지된다", C.accent1],
     ["노출 횟수별로 쪼개지 않는다", "5회 노출자 vs 1회 노출자는 처치 효과가 아니다", "활동적인 사용자일수록 많이 노출된다 → 성향 차이를 보게 된다", C.accent4],
-    ["배정과 노출을 따로 기록한다", "Assignment(어느 그룹) vs Exposure(실제로 봤나)", "실제로 영향받을 수 있는 사람만 분석하면 노이즈가 준다 → 트리거 분석(Ch2)", C.accent2],
+    ["배정과 노출을 따로 기록한다", "Assignment(어느 그룹) vs Exposure(실제로 봤나)", "실제로 영향받을 수 있는 사람만 분석하면 노이즈가 준다 → 트리거 분석(위키 04편)", C.accent2],
   ];
   rules.forEach(([h, a, d, color], i) => {
     const x = L + i * 4.05;
@@ -1574,7 +1698,7 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
     "위키 06편 1.1~1.3. SUTVA는 한 사용자가 받은 처치가 다른 사용자의 결과에 영향을 주지 않는다는 가정이고, 이것이 깨지는 현상이 간섭입니다. "
     + "실무에서는 Spillover, Leakage라고도 부릅니다. 직접 간섭은 사용자끼리 연결된 서비스(SNS, 메신저, 게임)에서, "
     + "간접 간섭은 한정된 자원이나 같은 시장을 공유할 때(메이플 옥션의 매물, Airbnb 숙소, Uber 드라이버, 광고 예산, 서버) 생깁니다.");
-  T(s, [R("SUTVA  ", { bold: true, color: C.accent1 }), R("(Ch2)이 깨지는 현상 = 간섭 · 실무 용어 Spillover, Leakage")],
+  T(s, [R("SUTVA  ", { bold: true, color: C.accent1 }), R("(위키 06편)이 깨지는 현상 = 간섭 · 실무 용어 Spillover, Leakage")],
     { x: L, y: 1.9, w: CW, h: 0.45, fontSize: 15 });
   const col = (x, head, sub, chain, examples, color) => {
     T(s, [BR(head, { bold: true, fontSize: 20, color }), R(sub, { fontSize: 14, color: C.text2 })], { x, y: 2.6, w: 5.4, h: 0.8 });
@@ -1627,7 +1751,7 @@ section("Ch4 함정과 고급 설계", "04", "실무 함정과 고급 설계", "
     [b("분석 단계 보정"), "직접 효과와 Spillover 효과를 나눠 추정", "설계만으로 다 막지 못할 때", "네트워크 정보와 추가 가정이 필요"],
   ], { x: L, y: 1.85, w: CW, colW: [2.6, 3.5, 3.0, 2.83], rowH: 0.62, fontSize: 15 });
   T(s, [R("기억할 것  ", { bold: true, color: C.accent1 }),
-    R("클러스터·지역 단위로 나눴다면 분석의 불확실성도 그 단위로 계산합니다 (배정 단위와 분석 단위, Ch3)")],
+    R("클러스터·지역 단위로 나눴다면 분석의 불확실성도 그 단위로 계산합니다 (배정 단위와 분석 단위, 위키 04·09편)")],
   { x: L, y: 6.15, w: CW, h: 0.4, fontSize: 15 });
   SRC(s, "위키 07편 2.1~2.5", 6.6);
 }
@@ -1775,7 +1899,7 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "그리�
 {
   const s = content("Ch5 사례와 결정", "Ch5 · 실험 성숙도 모델", "실험 성숙도: Crawl → Walk → Run → Fly",
     "위키 11편 3.1 (Kohavi 책). 핵심은 실험 횟수가 아니라 측정할 수 있는가 → 믿을 수 있게 실험하는가 → 대규모로 반복할 수 있는가 → 실험이 기본 의사결정 방식인가입니다. "
-    + "빈도는 대략적인 기준(rough rule of thumb)일 뿐 절대적인 경계가 아닙니다. Walk 단계의 계측 검증, A/A, SRM은 Ch3·Ch4에서 다룬 내용입니다.");
+    + "빈도는 대략적인 기준(rough rule of thumb)일 뿐 절대적인 경계가 아닙니다. Walk 단계의 계측 검증, A/A, SRM은 위키 09·10편에서 다룬 내용입니다.");
   const b = (t, color) => ({ text: t, options: { bold: true, color: color || HEX.ink } });
   table(s, ["단계", "핵심 목표", "조직의 모습", "실험 빈도 (대략)"], [
     [b("Crawl", HEX.ink3), "실험할 수 있는 기반 만들기", "계측·로깅, 기초 분석 역량", "월 1회 · 약 10회/년"],
@@ -1847,6 +1971,7 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "그리�
 }
 {
   const s = pres.addSlide({ masterName: "COVER", sectionTitle: "Ch5 사례와 결정" });
+  s._deckTopic = "summary";
   T(s, "정리", { x: L, y: 0.54, w: 7.6, h: 0.73, fontSize: 44, bold: true, color: "FFFFFF" });
   T(s, [
     BR("1   랜덤 배정이 인과를 말할 수 있게 해 준다", { paraSpaceAfter: 14 }),
@@ -1888,6 +2013,71 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "그리�
 }
 addReferenceSlides();
 
+function stageDivider(num, title, desc, key) {
+  const s = pres.addSlide({ masterName: "SECTION" });
+  s.addText(num, { placeholder: "num" });
+  s.addText(title, { placeholder: "title" });
+  s.addText(desc, { placeholder: "desc" });
+  s._deckTopic = key;
+  return s;
+}
+
+function reorderForWiki() {
+  const stages = [
+    { key: "stage-1", num: "01", title: "A/B 테스트의 기본 구조", desc: "기초용어와 실험이 필요한 이유", topics: ["00", "01"] },
+    { key: "stage-2", num: "02", title: "A/B 테스트 설계", desc: "문제 정의와 가설, 지표, 실험 단위, 운영 설계", topics: ["02", "03", "04", "05"] },
+    { key: "stage-3", num: "03", title: "신뢰할 수 있는 실험의 조건", desc: "간섭 문제와 해결 방법, 윤리", topics: ["06", "07", "08"] },
+    { key: "stage-4", num: "04", title: "실험 실행과 데이터 기반 문화", desc: "결과 해석, 실무 함정, 실험 플랫폼, 복습", topics: ["09", "10", "11", "12"] },
+  ];
+  const dividers = stages.map((stage) => stageDivider(stage.num, stage.title, stage.desc, stage.key));
+  const authored = pres._slides.filter((slide) => slide._deckTopic !== "legacy-section" && !slide._deckTopic?.startsWith("stage-"));
+  const byTopic = (topic) => authored.filter((slide) => slide._deckTopic === topic);
+  const opening = [...byTopic("cover"), ...byTopic("opening")];
+  const summary = byTopic("summary");
+  const reference = byTopic("reference");
+  const ordered = [...opening];
+
+  stages.forEach((stage, index) => {
+    ordered.push(dividers[index]);
+    stage.topics.forEach((topic) => {
+      if (topic === "12") {
+        ordered.push(...summary);
+      }
+      ordered.push(...byTopic(topic));
+    });
+    if (index === stages.length - 1) ordered.push(...reference);
+  });
+
+  const expected = authored.length + dividers.length;
+  if (ordered.length !== expected) {
+    const missing = authored.filter((slide) => !ordered.includes(slide)).map((slide) => slide._deckTitle || slide._deckTopic);
+    throw new Error(`위키 순서 재구성 누락: ${missing.join(", ")}`);
+  }
+
+  // ponytail: pptxgenjs가 공개 재정렬 API를 제공하면 내부 배열 접근을 교체한다.
+  pres._slides = ordered;
+  ordered.forEach((slide, index) => {
+    slide._name = `Slide ${index + 1}`;
+    slide._slideNum = index + 1;
+    slide._rId = index + 2;
+    slide._slideId = index + 256;
+  });
+
+  pres._sections = [
+    { _type: "user", title: "오프닝", _slides: opening },
+    ...stages.map((stage, index) => ({
+      _type: "user",
+      title: stage.title,
+      _slides: [dividers[index], ...stage.topics.flatMap((topic) => [
+        ...(topic === "12" ? summary : []),
+        ...byTopic(topic),
+      ]), ...(index === stages.length - 1 ? reference : [])],
+    })),
+  ];
+}
+
+reorderForWiki();
+
 // ---------- 저장 + 테마 색 + 한글(ea) 폰트 ----------
 // pptxgenjs는 테마 색을 쓰지 못해 저장 후 theme1.xml의 색 구성표를 THEME 값으로 바꾼다.
 const SLOTS = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
@@ -1902,6 +2092,12 @@ const SLOTS = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "acc
     .replace(/(<a:(?:theme|fontScheme)\b[^>]*?\bname=")[^"]*"/g, `$1${THEME.name}"`)
     .replace(/<a:ea typeface=""\/>/g, `<a:ea typeface="${KO_FONT}"/>`);
   zip.file(part, xml);
+  const visibleParts = Object.keys(zip.files).filter((name) =>
+    name === "ppt/presentation.xml" || /^ppt\/(?:slides|notesSlides)\/.*\.xml$/.test(name));
+  for (const name of visibleParts) {
+    const contents = await zip.file(name).async("string");
+    if (/Ch[1-5]/.test(contents)) throw new Error(`이전 챕터 표기가 남았습니다: ${name}`);
+  }
   fs.writeFileSync(OUT, await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
   console.log("wrote", OUT);
 })();
