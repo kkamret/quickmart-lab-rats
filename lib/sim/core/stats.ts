@@ -160,6 +160,26 @@ export function meanTest(a: { m: number; sd: number; n: number }, b: { m: number
 }
 
 /** SRM: 기대 배정비(ratios)와 관측 수(counts)의 카이제곱 적합도 검정. */
+/**
+ * 층별 비교를 역분산 가중으로 합친다(층화 분석). 층 안에서는 배정 비율이 같아서 합산 왜곡이 없고,
+ * 합친 효과는 SE 가 작은 층에 더 큰 가중을 준다. 층이 하나면 그대로 돌려준다.
+ */
+export function combineStrata(parts: CompareResult[], alpha = 0.05): CompareResult {
+  if (parts.length === 0) throw new Error("합칠 층이 없어요.");
+  if (parts.length === 1) return parts[0];
+  let w = 0;
+  let dSum = 0;
+  let aSum = 0;
+  for (const p of parts) {
+    const wi = 1 / (p.se * p.se);
+    w += wi;
+    dSum += wi * p.d;
+    aSum += wi * p.vA;
+  }
+  const vA = aSum / w;
+  return compareDiff(vA, vA + dSum / w, 1 / Math.sqrt(w), alpha);
+}
+
 export function srm(counts: number[], ratios: number[]): { chi: number; df: number; p: number; N: number } {
   if (counts.length !== ratios.length || counts.length < 2) throw new Error("srm: counts 와 ratios 길이가 같고 2 이상이어야 해요");
   const N = counts.reduce((s, x) => s + x, 0);
