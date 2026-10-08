@@ -416,3 +416,70 @@ describe("P2 iOS 구버전 버그와 램프업", () => {
     if (v.ok) expect("qa_old_ios" in v.design).toBe(false);
   });
 });
+
+describe("플래그 규칙(이론 근거)", () => {
+  const why = (r: Readout) => (r.panels._why ?? {}) as Record<string, string>;
+
+  it("SHORT_DURATION: 완전한 주(7의 배수)가 아니면 붙는다", () => {
+    const r10 = simulateBaemin(p1({ duration_days: 10 }));
+    expect(r10.flags).toContain("SHORT_DURATION");
+    expect(why(r10).SHORT_DURATION).toContain("요일 주기");
+    for (const days of [14, 21, 28]) expect(simulateBaemin(p1({ duration_days: days })).flags, `${days}일`).not.toContain("SHORT_DURATION");
+  });
+
+  it("SHORT_DURATION: 첫 주만 본 7일 설계에는 신기효과 문구가 붙는다", () => {
+    const r7 = simulateBaemin(p1({ duration_days: 7 }));
+    expect(r7.flags).toContain("SHORT_DURATION");
+    expect(why(r7).SHORT_DURATION).toContain("첫 주");
+  });
+
+  it("SHORT_DURATION: 분석한 사용자 수가 필요 표본에 못 미치면 붙는다", () => {
+    const r = simulateBaemin(p1({ duration_days: 14, mde_pp: 0.5 }));
+    expect(r.flags).toContain("SHORT_DURATION");
+    expect(why(r).SHORT_DURATION).toContain("필요 표본");
+    // 14일은 완전한 주이고 표본이 충분한 기본 설계에는 붙지 않는다
+    expect(simulateBaemin(p1()).flags).not.toContain("SHORT_DURATION");
+  });
+
+  it("SHORT_DURATION: 중간 확인으로 일찍 멈춘 설계는 요일 주기 규칙 대상이 아니다", () => {
+    const peek = simulateBaemin(p1({ stopping: "peek_stop", duration_days: 28 }));
+    expect(peek.stoppedAt!).toBeLessThan(28);
+    if (peek.stoppedAt! > 7) {
+      // 8일 이후에 멈췄다면 요일 주기 문구는 없어야 한다
+      expect(why(peek).SHORT_DURATION ?? "").not.toContain("요일 주기");
+    }
+  });
+
+  it("UNDERPOWERED: 달성 검정력이 설계에서 정한 검정력보다 낮을 때 붙는다", () => {
+    const a = simulateBaemin(p3({ coupon_ops: "high" })).achievedPower!;
+    for (const power of [0.7, 0.8, 0.9]) {
+      const r = simulateBaemin(p3({ coupon_ops: "high", power }));
+      expect(r.achievedPower, `power ${power}`).toBeCloseTo(a, 10);
+      expect(r.flags.includes("UNDERPOWERED"), `power ${power}`).toBe(a < power);
+    }
+    expect(why(simulateBaemin(p3())).UNDERPOWERED).toContain("검정력");
+  });
+
+  it("MULTIPLE_TESTING: 보정 없이 Primary 가 아닌 비교가 14개 이상(가족 오류율 > 0.5, α=0.05)일 때 붙는다", () => {
+    const secondary14 = ["aov", "gmv", "repurchase7", "cs_rate", "near_min_share"]; // 가드레일 2 + 보조 5 = 7개 지표 × 처치군 2 = 14
+    const r14 = simulateBaemin(p4({ metrics: { primary: "conv", guardrails: ["abandon", "crash"], secondary: secondary14 } }));
+    expect(r14.flags).toContain("MULTIPLE_TESTING");
+    expect(why(r14).MULTIPLE_TESTING).toContain("다중검정");
+    // 가드레일 2 + 보조 4 = 6개 지표 × 처치군 2 = 12개: 1-0.95^12 ≈ 0.46
+    const r12 = simulateBaemin(p4({ metrics: { primary: "conv", guardrails: ["abandon", "crash"], secondary: secondary14.slice(0, 4) } }));
+    expect(r12.flags).not.toContain("MULTIPLE_TESTING");
+    // 보정하면 14개여도 붙지 않는다
+    const bh = simulateBaemin(p4({ correction: "bh", metrics: { primary: "conv", guardrails: ["abandon", "crash"], secondary: secondary14 } }));
+    expect(bh.flags).not.toContain("MULTIPLE_TESTING");
+    // P1 기본 설계(비교 3개)에는 붙지 않는다
+    expect(simulateBaemin(p1()).flags).not.toContain("MULTIPLE_TESTING");
+  });
+
+  it("SRM 과 SIMPSON_RISK 에도 근거 문장이 붙고, 조 화면에는 _why 가 보이지 않는다", () => {
+    const srm = simulateBaemin(p2({ count_basis: "exposure" }));
+    expect(why(srm).SRM).toContain("0.001");
+    const simpson = simulateBaemin(p1({ ramp: "10_week1_50_week2", metrics: { primary: "conv", guardrails: ["abandon"], secondary: [] } }), { mode: "simpson_demo" });
+    expect(why(simpson).SIMPSON_RISK).toContain("심슨");
+    expect(toTeamView(srm).panels._why).toBeUndefined();
+  });
+});

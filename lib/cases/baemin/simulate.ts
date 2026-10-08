@@ -13,6 +13,7 @@ import {
   ABANDON, AOV, AOV_SD, CART_ADD, CRASH, DAILY_INFLOW, GMV_SD, HEAVY_ABANDON, INFLOW_NOISE, NEAR_MIN, PROMO, REPURCHASE7, SEED,
   SEGMENTS, SURFACE_STORE_HOME_MULT, TRIGGER, TYPE_KEYS, VIRTUAL, WEEKDAY_MULT, WEEKEND_ABANDON, WEEKEND_CART, isPromo, isWeekend,
 } from "./population";
+import { theoryLabel } from "@/lib/theory";
 import { designUnion, type Design, type MetricKey, type SimPhase } from "./schema";
 
 export type SimOptions = {
@@ -514,16 +515,48 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   // ── 비용 ──
   const costs = d.phase === "p3" && d.coupon_ops === "high" ? { coupon_cost_krw: Math.round(armAgg("B", "trig").users * TRIGGER.couponCostKrw) } : undefined;
 
-  // ── 플래그 (조 화면에는 내려보내지 않는다) ──
+  // ── 플래그 (조 화면에는 내려보내지 않는다). 임계값이 있는 플래그는 이유를 _why 에 남긴다(강사·정답 공개 전용). ──
   const flags: Flag[] = [];
-  if (srmRes.p < 0.001) flags.push("SRM");
-  if (d.unit !== "user") flags.push("UNIT_MISMATCH");
-  if (win.length < 14) flags.push("SHORT_DURATION");
-  if (achievedPower !== undefined && achievedPower < 0.5) flags.push("UNDERPOWERED");
-  if (d.stopping === "peek_stop") flags.push("PEEKED");
-  if (d.ramp === "10_week1_50_week2" && d.analysis_mode === "pooled" && strata.length > 1) flags.push("SIMPSON_RISK");
-  if (correction === "none" && pending.length >= 10) flags.push("MULTIPLE_TESTING");
-  if (d.phase === "p3" && !d.trigger_logging) flags.push("SELECTION_BIAS");
+  const why: Partial<Record<Flag, string>> = {};
+  const raise = (f: Flag, reason?: string) => {
+    flags.push(f);
+    if (reason) why[f] = reason;
+  };
+  const num = (x: number) => Math.round(x).toLocaleString("ko-KR");
+  const label = (...k: Parameters<typeof theoryLabel>[0][]) => `[근거: ${k.map(theoryLabel).join(", ")}]`;
+
+  if (srmRes.p < 0.001) {
+    raise("SRM", `그룹별 사용자 수의 배정 비율 검정 p=${srmRes.p.toExponential(1)}로, 우연으로 보기 어려운 어긋남이에요. 이 앱은 업계 관례인 0.001을 기준으로 해요. ${label("srm")}`);
+  }
+  if (d.unit !== "user") raise("UNIT_MISMATCH");
+
+  const shortReasons: string[] = [];
+  const analysedA = armAgg("A").users;
+  if (planned && analysedA < planned.nPerArm) {
+    shortReasons.push(`분석한 그룹당 사용자가 ${num(analysedA)}명으로, 설계한 α·검정력·MDE로 정한 필요 표본 ${num(planned.nPerArm)}명보다 적어요. ${label("alpha_power", "mde")}`);
+  }
+  if (stopIdx === K - 1 && win.length % 7 !== 0) {
+    shortReasons.push(`분석 구간 ${win.length}일이 요일 주기(7일)의 배수가 아니라 요일별 패턴이 한쪽으로 치우쳐요. ${label("duration")}`);
+  }
+  if (win.length <= 7) {
+    shortReasons.push(`분석 구간이 ${win.length}일로 첫 주에 그쳐서 신기효과가 섞였을 수 있어요. ${label("duration", "novelty")}`);
+  }
+  if (shortReasons.length) raise("SHORT_DURATION", shortReasons.join(" "));
+
+  if (achievedPower !== undefined && achievedPower < d.power) {
+    raise("UNDERPOWERED", `달성 검정력 ${Math.round(achievedPower * 100)}%가 설계에서 정한 ${Math.round(d.power * 100)}%보다 낮아요. ${label("error_power")}`);
+  }
+  if (d.stopping === "peek_stop") raise("PEEKED");
+  if (d.ramp === "10_week1_50_week2" && d.analysis_mode === "pooled" && strata.length > 1) {
+    raise("SIMPSON_RISK", `기간마다 A:B 배정 비율이 달라졌는데(${strata.length}개 구간) 합쳐서 분석했어요. 같은 비율끼리 나눠 비교하면 결론이 달라질 수 있어요. ${label("simpson")}`);
+  }
+  const familyM = pending.filter((p) => metricList[p.mi].role !== "P").length;
+  const familyError = 1 - (1 - alpha) ** familyM;
+  if (correction === "none" && familyError > 0.5) {
+    raise("MULTIPLE_TESTING", `보정 없이 Primary가 아닌 비교 ${familyM}개를 보면, 효과가 전혀 없어도 하나라도 유의하게 나올 확률이 ${Math.round(familyError * 100)}%예요. ${label("multiple_testing")}`);
+  }
+  if (d.phase === "p3" && !d.trigger_logging) raise("SELECTION_BIAS");
+  if (Object.keys(why).length) panels._why = why;
 
   return {
     caseKey: "baemin",
