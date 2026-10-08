@@ -19,7 +19,7 @@ const p1 = (over: D = {}): D => ({
 });
 const p2 = (over: D = {}): D =>
   p1({
-    phase: "p2", qa_old_ios: true, scope: { os: "all", surface: "all" },
+    phase: "p2", scope: { os: "all", surface: "all" },
     metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov", "gmv", "near_min_share"] }, ...over,
   });
 const p3 = (over: D = {}): D =>
@@ -96,8 +96,8 @@ describe("배민 검증 시나리오", () => {
     expect(rate).toBeLessThanOrEqual(0.07);
   }, 60000);
 
-  it("#6 P2 전체, 노출 기준, qa_old_ios=false: SRM, B 사용자 약 7천 명 부족", () => {
-    const r = simulateBaemin(p2({ qa_old_ios: false, count_basis: "exposure" }));
+  it("#6 P2 전체, 노출 기준, 램프업 없음: SRM, B 사용자 약 7천 명 부족", () => {
+    const r = simulateBaemin(p2({ count_basis: "exposure" }));
     expect(r.srm!.p).toBeLessThan(0.001);
     expect(r.flags).toContain("SRM");
     const [a, b] = r.srm!.counts;
@@ -109,8 +109,8 @@ describe("배민 검증 시나리오", () => {
     expect(Math.abs(byOs.android.A.users - byOs.android.B.users)).toBeLessThan(1500);
   });
 
-  it("#7 P2 전체, 배정 기준, qa_old_ios=true: SRM 없음, 이탈·전환 개선, aov 악화, gmv 차이 없음, first_order 이탈 악화", () => {
-    const r = simulateBaemin(p2());
+  it("#7 P2 전체, 램프업으로 시작(버그 없음): SRM 없음, 이탈·전환 개선, aov 악화, gmv 차이 없음, first_order 이탈 악화", () => {
+    const r = simulateBaemin(p2({ ramp: "10_50_100" }));
     expect(r.srm!.p).toBeGreaterThan(0.001);
     expect(cmp(r, "abandon").d).toBeLessThan(0);
     expect(cmp(r, "abandon").significant).toBe(true);
@@ -183,8 +183,8 @@ describe("배민 검증 시나리오", () => {
     const a = JSON.stringify(simulateBaemin(p1()));
     const b = JSON.stringify(simulateBaemin(p1()));
     expect(a).toBe(b);
-    expect(JSON.stringify(simulateBaemin(p2({ qa_old_ios: false, count_basis: "exposure" })))).toBe(
-      JSON.stringify(simulateBaemin(p2({ qa_old_ios: false, count_basis: "exposure" }))),
+    expect(JSON.stringify(simulateBaemin(p2({ count_basis: "exposure" })))).toBe(
+      JSON.stringify(simulateBaemin(p2({ count_basis: "exposure" }))),
     );
   });
 
@@ -378,5 +378,41 @@ describe("분석 방식(analysis_mode)", () => {
     const v = validateDesign(d);
     expect(v.ok).toBe(true);
     if (v.ok) expect(v.design.analysis_mode).toBe("pooled");
+  });
+});
+
+describe("P2 iOS 구버전 버그와 램프업", () => {
+  it("램프업 없음(ramp none)이면 노출 기준에서 SRM, 배정 기준에서는 SRM 없이 크래시가 오른다", () => {
+    const exposure = simulateBaemin(p2({ count_basis: "exposure" }));
+    expect(exposure.flags).toContain("SRM");
+    const assignment = simulateBaemin(p2({ count_basis: "assignment" }));
+    expect(assignment.flags).not.toContain("SRM");
+    expect(cmp(assignment, "crash").d).toBeGreaterThan(0.01);
+    expect(cmp(assignment, "crash").significant).toBe(true);
+  });
+
+  it("램프업으로 시작하면 집계 기준이 exposure 여도 버그가 없다", () => {
+    for (const ramp of ["10_50_100", "10_week1_50_week2"]) {
+      const r = simulateBaemin(p2({ ramp, count_basis: "exposure" }));
+      expect(r.flags, ramp).not.toContain("SRM");
+      expect(cmp(r, "crash").significant, ramp).toBe(false);
+    }
+  });
+
+  it("램프업을 쓴 P2 는 강사 전용 안내(_notes)가 붙고, 조 화면에는 보이지 않는다", () => {
+    const r = simulateBaemin(p2({ ramp: "10_50_100" }));
+    const notes = r.panels._notes as string[];
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain("램프업");
+    expect(toTeamView(r).panels._notes).toBeUndefined();
+    expect(simulateBaemin(p2()).panels._notes).toBeUndefined();
+    expect(simulateBaemin(p1({ ramp: "10_50_100" })).panels._notes).toBeUndefined();
+  });
+
+  it("p2 스키마에는 qa_old_ios 가 없다", () => {
+    expect(baeminPlugin.formMeta.p2.map((f) => f.name)).not.toContain("qa_old_ios");
+    const v = validateDesign(p2());
+    expect(v.ok).toBe(true);
+    if (v.ok) expect("qa_old_ios" in v.design).toBe(false);
   });
 });

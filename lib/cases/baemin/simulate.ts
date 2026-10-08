@@ -152,7 +152,8 @@ function generate(d: Design, o: Required<Pick<SimOptions, "seed" | "noise" | "mo
   const segs = SEGMENTS.filter((s) => d.scope.os === "all" || s.os === "android");
   const surface = d.scope.surface === "store_home" ? SURFACE_STORE_HOME_MULT : 1;
   const unitK = UNIT_EFFECT_SCALE[d.unit];
-  const bug = d.phase === "p2" && !d.qa_old_ios && !aa;
+  // 램프업(점진 노출)으로 시작했다면 초기 단계의 크래시 가드레일에서 버그가 먼저 드러나 고친 뒤 시작한 것으로 본다.
+  const bug = d.phase === "p2" && d.ramp === "none" && !aa;
   const trigShare = d.phase === "p3" ? TRIGGER.share[d.coupon_ops] : 0;
 
   const count: Counter = o.noise ? binomialCount : (n, p) => n * p;
@@ -506,6 +507,9 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     };
   }
   if (truth) panels._truth = truth;
+  if (d.phase === "p2" && d.aa !== true && d.ramp !== "none") {
+    panels._notes = ["램프업 초기 단계의 크래시 가드레일에서 iOS 구버전 버그가 먼저 드러나, 고친 뒤 다시 시작한 것으로 본다. 그래서 이 실험에는 버그가 없다."];
+  }
 
   // ── 비용 ──
   const costs = d.phase === "p3" && d.coupon_ops === "high" ? { coupon_cost_krw: Math.round(armAgg("B", "trig").users * TRIGGER.couponCostKrw) } : undefined;

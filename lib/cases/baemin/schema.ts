@@ -34,7 +34,7 @@ const common = {
 };
 
 export const p1Schema = z.object({ phase: z.literal("p1"), ...common });
-export const p2Schema = z.object({ phase: z.literal("p2"), ...common, qa_old_ios: z.boolean() });
+export const p2Schema = z.object({ phase: z.literal("p2"), ...common });
 export const p3Schema = z.object({
   phase: z.literal("p3"),
   ...common,

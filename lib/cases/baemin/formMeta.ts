@@ -95,10 +95,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
     { name: "rationale", label: "그렇게 생각한 이유", help: "다른 설명(교란)이 가능한지 적어보세요.", type: "textarea" },
   ],
   p1: common,
-  p2: [
-    ...common,
-    { name: "qa_old_ios", label: "iOS 구버전에서 사전 QA를 했나요?", help: "하지 않았다면 구버전에서 문제가 생길 수 있어요.", type: "boolean" },
-  ],
+  p2: common,
   p3: [
     ...common,
     { name: "trigger_logging", label: "트리거 조건 로깅(counterfactual logging)", help: "대조군에서도 \"문구가 있었다면 노출됐을\" 조건을 기록해요.", type: "boolean" },

@@ -24,7 +24,7 @@ export function defaultDesign(phase: string, prev?: Obj): Obj {
   if (phase === "diagnose") return { rationale: "" };
   if (sim === "p1") return { ...blankP1(), ...(prev && prev.phase === "p1" ? prev : {}) };
   const base = { ...blankP1(), ...(prev ?? {}) };
-  if (sim === "p2") return { ...base, phase: "p2", scope: { os: "all", surface: "all" }, qa_old_ios: false, count_basis: "exposure" };
+  if (sim === "p2") return { ...base, phase: "p2", scope: { os: "all", surface: "all" }, count_basis: "exposure" };
   if (sim === "p3") {
     return {
       ...base, phase: "p3", trigger_logging: false, coupon_ops: "low",

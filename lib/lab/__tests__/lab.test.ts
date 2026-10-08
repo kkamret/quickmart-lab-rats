@@ -63,12 +63,13 @@ describe("기본 설계와 폼 검증 메시지", () => {
     expect(msgs.join("\n")).toContain("중간 확인 규칙");
     expect(msgs.join("\n")).toContain("대상과 Treatment");
   });
-  it("앞 Phase 설계를 이어받는다: P2 는 P1 의 메인 지표·가설을 유지하되 qa_old_ios=false 로 시작", () => {
+  it("앞 Phase 설계를 이어받는다: P2 는 P1 의 메인 지표·가설을 유지하되 집계 기준은 exposure 로 시작", () => {
     const p1 = { ...baeminClient.defaultDesign("p1"), metrics: { primary: "abandon", guardrails: ["conv"], secondary: [] }, unit: "user" };
     const p2 = baeminClient.defaultDesign("p2", p1) as Record<string, unknown>;
     expect(p2.phase).toBe("p2");
     expect((p2.metrics as { primary: string }).primary).toBe("abandon");
-    expect(p2.qa_old_ios).toBe(false);
+    expect(p2.qa_old_ios).toBeUndefined();
+    expect(p2.count_basis).toBe("exposure");
     expect(p2.unit).toBe("user");
   });
   it("모든 Phase 의 기본값이 폼 메타 이름과 어긋나지 않는다(스키마 키가 폼에 있다)", () => {
