@@ -72,7 +72,7 @@ const design = {
   phase: "p1", hypothesis: { action: "안내해요", behavior: "바로 주문해요", impact: "이탈이 줄어요" },
   scope: { os: "android", surface: "store_home" }, unit: "session",
   metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov"] },
-  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 7, allocation: 1, ramp: "none", analysis_mode: "pooled", stopping: "fixed", count_basis: "assignment",
+  alpha: 0.05, power: 0.8, duration_days: 7, allocation: 1, ramp: "none", analysis_mode: "pooled", stopping: "fixed", count_basis: "assignment",
 };
 const sim = summarizeSim(simulateBaemin(design));
 

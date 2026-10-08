@@ -7,6 +7,7 @@ import type { Comparison, MetricResult, Readout } from "@/lib/sim/core";
 import { theoryLabel, type TheoryKey } from "@/lib/theory";
 import type { Judgement, Verdict } from "../types";
 import { designUnion, type Design, type MetricKey } from "./schema";
+import { mdeOf } from "./mde";
 
 type Action = "deploy" | "followup" | "stop" | "rerun";
 type State = "halt" | "deploy_clean" | "deploy_risk" | "deploy_novelty" | "small_sig" | "null_narrow" | "null_wide" | "bad";
@@ -159,7 +160,7 @@ function stateOf(phase: string, readout: Readout, design: Design, arm: string): 
   const primary = design.metrics.primary;
   const m = readout.metrics.find((x) => x.key === primary);
   const c = m?.comparisons.find((x) => x.arm === arm);
-  const mde = design.mde_pp / 100;
+  const mde = mdeOf(primary) / 100;
   const h = harms(readout, arm, primary);
   const stoppedAt = readout.stoppedAt ?? design.duration_days;
 

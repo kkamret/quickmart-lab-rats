@@ -14,7 +14,7 @@ type D = Record<string, unknown>;
 const p1 = (over: D = {}): D => ({
   phase: "p1", hypothesis: hyp, scope: { os: "android", surface: "store_home" }, unit: "user",
   metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov"] },
-  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled",
+  alpha: 0.05, power: 0.8, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled",
   stopping: "fixed", count_basis: "assignment", ...over,
 });
 const p2 = (over: D = {}): D =>
@@ -263,8 +263,8 @@ describe("설계 검증과 규칙", () => {
     const r = simulateBaemin(p1());
     expect(r.planned!.nPerArm).toBeGreaterThan(1000);
     expect(r.planned!.days).toBeGreaterThan(0);
-    // MDE 를 키우면 필요한 표본이 줄어든다
-    expect(simulateBaemin(p1({ mde_pp: 4 })).planned!.nPerArm).toBeLessThan(r.planned!.nPerArm);
+    // 검정력을 낮추면 필요한 표본이 줄어든다 (MDE 는 Primary 지표별로 고정)
+    expect(simulateBaemin(p1({ power: 0.7 })).planned!.nPerArm).toBeLessThan(r.planned!.nPerArm);
   });
 });
 
@@ -434,7 +434,7 @@ describe("플래그 규칙(이론 근거)", () => {
   });
 
   it("SHORT_DURATION: 분석한 사용자 수가 필요 표본에 못 미치면 붙는다", () => {
-    const r = simulateBaemin(p1({ duration_days: 14, mde_pp: 0.5 }));
+    const r = simulateBaemin(p1({ duration_days: 14, allocation: 0.1 }));
     expect(r.flags).toContain("SHORT_DURATION");
     expect(why(r).SHORT_DURATION).toContain("필요 표본");
     // 14일은 완전한 주이고 표본이 충분한 기본 설계에는 붙지 않는다

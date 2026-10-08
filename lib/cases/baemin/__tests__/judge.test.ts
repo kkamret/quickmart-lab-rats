@@ -13,7 +13,7 @@ type D = Record<string, unknown>;
 const base = (over: D = {}): D => ({
   phase: "p1", hypothesis: hyp, scope: { os: "android", surface: "store_home" }, unit: "user",
   metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov"] },
-  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled",
+  alpha: 0.05, power: 0.8, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled",
   stopping: "fixed", count_basis: "assignment", ...over,
 });
 const p2 = (over: D = {}) => base({ phase: "p2", scope: { os: "all", surface: "all" }, metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov", "gmv", "near_min_share"] }, ...over });
@@ -156,9 +156,7 @@ describe("judgeBaemin: 실제 시뮬레이터 결과", () => {
 
   it("P2 램프업으로 시작: 평균주문금액 악화 때문에 후속 실험을 붙인 배포가 정답", () => {
     const opts = ["full_deploy", "no_deploy", "deploy_followup"];
-    expect(pick(p2({ ramp: "10_50_100", mde_pp: 1.5 }), opts)).toEqual({ full_deploy: "partial", no_deploy: "wrong", deploy_followup: "correct" });
-    // 기본 MDE 2%p 에서는 효과(-1.99%p)가 MDE 바로 아래라 "유의하지만 MDE보다 작음"으로 분류된다.
-    expect(pick(p2({ ramp: "10_50_100" }), opts)).toEqual({ full_deploy: "partial", no_deploy: "partial", deploy_followup: "partial" });
+    expect(pick(p2({ ramp: "10_50_100" }), opts)).toEqual({ full_deploy: "partial", no_deploy: "wrong", deploy_followup: "correct" });
   });
 
   it("P3 쿠폰 운영 low: 노출 조건을 넓혀 재실험이 정답, 롤백은 오답", () => {

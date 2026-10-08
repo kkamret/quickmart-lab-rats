@@ -19,8 +19,6 @@ const common = {
   metrics: z.object({ primary: metricKey, guardrails: z.array(metricKey), secondary: z.array(metricKey) }),
   alpha: z.union([z.literal(0.01), z.literal(0.05), z.literal(0.1)]),
   power: z.union([z.literal(0.7), z.literal(0.8), z.literal(0.9)]),
-  /** 메인 지표 기준 절대 %p (금액 지표면 상대 %) */
-  mde_pp: z.number().positive(),
   duration_days: z.number().int().min(7, "7일 미만은 입력할 수 없어요").max(28),
   /** 범위 트래픽 중 실험에 투입하는 비율 */
   allocation: z.number().min(0.05).max(1),

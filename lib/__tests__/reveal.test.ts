@@ -38,7 +38,7 @@ describe("정답 공개: 결정 판정과 플래그 설명", () => {
   const design = {
     phase: "p1", hypothesis: hyp, scope: { os: "android", surface: "store_home" }, unit: "user",
     metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov"] },
-    alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled", stopping: "fixed", count_basis: "assignment",
+    alpha: 0.05, power: 0.8, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled", stopping: "fixed", count_basis: "assignment",
   };
   const realRun = (d: Record<string, unknown>, at = "2026-01-02"): RunRow => ({ team_id: "t1", phase: "p1", design: d, result: simulateBaemin(d), created_at: at });
 

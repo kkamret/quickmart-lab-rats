@@ -11,7 +11,6 @@ const blankP1 = (): Obj => ({
   metrics: { guardrails: [], secondary: [] },
   alpha: 0.05,
   power: 0.8,
-  mde_pp: 1,
   duration_days: 7,
   allocation: 1,
   ramp: "none",

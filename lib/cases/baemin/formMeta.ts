@@ -1,4 +1,6 @@
 import type { FieldMeta, FieldOption } from "../types";
+import { BUSINESS_MDE_PP } from "./mde";
+import type { MetricKey } from "./schema";
 
 const METRIC_OPTIONS: FieldOption[] = [
   { value: "abandon", label: "장바구니 이탈률", desc: "장바구니에 담은 사용자 중 주문하지 않고 떠난 비율" },
@@ -13,6 +15,9 @@ const METRIC_OPTIONS: FieldOption[] = [
   { value: "cs_rate", label: "고객 문의율", desc: "주문 대비 고객 문의 비율" },
   { value: "min_reach", label: "최소주문금액 도달률", desc: "장바구니 사용자 중 최소주문금액을 채운 비율" },
 ];
+
+const PCT_METRICS = new Set<string>(["aov", "gmv", "load_time"]);
+const MDE_HELP = METRIC_OPTIONS.map((o) => `${o.label} ${BUSINESS_MDE_PP[o.value as MetricKey]}${PCT_METRICS.has(String(o.value)) ? "%" : "%p"}`).join(", ");
 
 const common: FieldMeta[] = [
   { name: "hypothesis.action", label: "대상과 Treatment: 누구에게 무엇을 적용하나요?", help: "[대상]에게 [Treatment]를 적용하면… 의 앞부분이에요. 바꾸는 것은 한 가지로 좁혀요.", type: "textarea" },
@@ -40,7 +45,7 @@ const common: FieldMeta[] = [
       { value: "pageview", label: "페이지뷰", desc: "화면을 열 때마다 그룹이 바뀔 수 있어요." },
     ],
   },
-  { name: "metrics.primary", label: "Primary 지표", help: "실험의 성패를 가르는 지표 한 개. 실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요.", type: "select", options: METRIC_OPTIONS },
+  { name: "metrics.primary", label: "Primary 지표", help: `실험의 성패를 가르는 지표 한 개. 실험 전체가 좋은 변화인지 보는 OEC와 가까운 지표를 고르면 좋아요. 비즈니스에서 협의한 MDE(교육용 가상 값): ${MDE_HELP}.`, type: "select", options: METRIC_OPTIONS },
   { name: "metrics.secondary", label: "Secondary·Driver 지표", help: "다음 가설을 찾는 데 쓰는 지표", type: "multiselect", options: METRIC_OPTIONS },
   { name: "metrics.guardrails", label: "Guardrail 지표", help: "나빠지면 안 되는 지표", type: "multiselect", options: METRIC_OPTIONS },
   {
@@ -51,7 +56,6 @@ const common: FieldMeta[] = [
     name: "power", label: "검정력", help: "높게 잡을수록 실제 효과를 놓칠 가능성이 줄지만 표본과 기간이 늘어요.", type: "select",
     options: [{ value: 0.7, label: "70%" }, { value: 0.8, label: "80%" }, { value: 0.9, label: "90%" }],
   },
-  { name: "mde_pp", label: "최소 검출 효과(MDE)", help: "비율 지표는 절대 %p, 금액 지표는 상대 %. 통계가 아니라 비즈니스가 정해요. 도입할 가치가 있는 최소 효과를 기준으로 잡아요.", type: "number", min: 0.01, step: 0.1, unit: "%p 또는 %" },
   { name: "duration_days", label: "실험 기간", help: "7일 미만은 입력할 수 없어요.", type: "number", min: 7, max: 28, step: 1, unit: "일" },
   { name: "allocation", label: "투입 비율", help: "범위 트래픽 중 실험에 쓰는 비율", type: "number", min: 0.05, max: 1, step: 0.05 },
   {

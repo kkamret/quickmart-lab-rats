@@ -15,6 +15,7 @@ import {
 } from "./population";
 import { theoryLabel } from "@/lib/theory";
 import { designUnion, type Design, type MetricKey, type SimPhase } from "./schema";
+import { mdeOf } from "./mde";
 
 export type SimOptions = {
   seed?: number;
@@ -468,11 +469,11 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     let mdeAbs: number;
     if (METRICS[primary].type === "prop") {
       const p1 = (fullA.x ?? 0) / fullA.n;
-      mdeAbs = d.mde_pp / 100;
+      mdeAbs = mdeOf(primary) / 100;
       const p2 = p1 - mdeAbs > 0 ? p1 - mdeAbs : p1 + mdeAbs;
       nDenom = ssProp(p1, p2, alpha, d.power);
     } else {
-      mdeAbs = (fullA.mean ?? 0) * (d.mde_pp / 100);
+      mdeAbs = (fullA.mean ?? 0) * (mdeOf(primary) / 100);
       nDenom = ssMean(fullA.sd ?? 1, mdeAbs, alpha, d.power);
     }
     const nUsers = Math.ceil(nDenom / perUser);
