@@ -1863,30 +1863,33 @@ section("Ch5 사례와 결정", "05", "산업 사례와 실험 문화", "그리�
 }
 // ---------- 복습 퀴즈 (답은 슬라이드에 넣지 않는다. 모범 답안은 위키 12편) ----------
 {
-  const s = content("Ch5 사례와 결정", "복습 퀴즈 1 · 객관식", "결과를 보고 가장 먼저 할 일은?",
+  const s = content("Ch5 사례와 결정", "복습 퀴즈 1 · 객관식", "결과를 보고 가장 먼저 해야 할 일은 무엇일까요?",
     "정답과 해설은 위키 12편에 있습니다. 1~2분 생각할 시간을 주고 손을 들어 답을 고르게 합니다.");
-  T(s, "50:50으로 설계한 실험에서 B안 전환율이 +3%p, p = 0.01로 나왔다", { x: L, y: 1.9, w: CW, h: 0.5, fontSize: 20 });
+  T(s, "50:50으로 설계한 실험에서 B안 전환율이 +3%p, p = 0.01로 나왔습니다", { x: L, y: 1.9, w: CW, h: 0.5, fontSize: 20 });
   T(s, [R("그런데 실제로 들어온 사용자 수는  ", { fontSize: 15, color: C.text2 }),
     R("A 50,000명", { fontSize: 30, bold: true, color: C.accent1 }), R("   ", { fontSize: 30 }),
-    R("B 48,800명", { fontSize: 30, bold: true, color: C.accent3 })], { x: L, y: 2.45, w: CW, h: 0.75 });
-  ["유의하므로 B안을 배포한다", "표본이 충분하니 신뢰구간만 확인하고 배포한다",
-    "결과 해석을 멈추고 배정·로깅 과정에서 원인을 찾는다", "B안의 이탈 사용자를 제외하고 다시 분석한다",
+    R("B 48,800명", { fontSize: 30, bold: true, color: C.accent3 }), R("  입니다", { fontSize: 15, color: C.text2 })],
+  { x: L, y: 2.45, w: CW, h: 0.75 });
+  T(s, "가장 먼저 해야 할 일로 옳은 것을 고르세요.", { x: L, y: 3.35, w: CW, h: 0.45, fontSize: 15, bold: true, color: C.accent1 });
+  ["유의하므로 B안을 배포합니다", "표본이 충분하니 신뢰구간만 확인하고 배포합니다",
+    "결과 해석을 멈추고 배정·로깅 과정에서 원인을 찾습니다", "B안의 이탈 사용자를 제외하고 다시 분석합니다",
   ].forEach((t, i) => {
-    const y = 3.55 + i * 0.62;
+    const y = 3.95 + i * 0.58;
     T(s, "①②③④"[i], { x: L, y, w: 0.6, h: 0.5, fontSize: 20, bold: true, color: C.accent1 });
     T(s, t, { x: L + 0.6, y, w: CW - 0.6, h: 0.5, fontSize: 20 });
   });
 }
 {
-  const s = content("Ch5 사례와 결정", "복습 퀴즈 2 · 주관식", "이 기능의 실험을 설계하라",
+  const s = content("Ch5 사례와 결정", "복습 퀴즈 2 · 주관식", "이 기능의 실험을 직접 설계해 보세요",
     "모범 답안과 채점 포인트는 위키 12편에 있습니다. 조별로 5분 정도 토의하고 한두 조가 발표합니다.");
-  T(s, [R("중고거래 앱에서 "), R("판매자에게 적정 가격을 추천하는 기능", { bold: true, color: C.accent1 }), R("을 실험하려 한다")],
+  T(s, [R("중고거래 앱에서 "), R("판매자에게 적정 가격을 추천하는 기능", { bold: true, color: C.accent1 }), R("을 실험하려고 합니다")],
     { x: L, y: 1.9, w: CW, h: 0.5, fontSize: 20 });
-  [["가설", "한 문장으로 쓴다"], ["지표", "Primary 하나, Guardrail 하나를 정한다"],
-    ["실험 단위", "사용자 단위로 나눌 때의 문제와 대안"]].forEach(([h, d], i) => {
+  T(s, "아래 세 가지 질문에 답하세요.", { x: L, y: 2.5, w: CW, h: 0.45, fontSize: 15, bold: true, color: C.accent1 });
+  [["가설", "한 문장으로 써 보세요"], ["지표", "Primary 지표와 Guardrail 지표를 하나씩 정해 보세요"],
+    ["실험 단위", "사용자 단위로 나누면 어떤 문제가 생길 수 있는지, 대안은 무엇인지 써 보세요"]].forEach(([h, d], i) => {
     const x = L + i * 4.05;
-    T(s, String(i + 1).padStart(2, "0"), { x, y: 2.9, w: 1.0, h: 0.6, fontSize: 30, bold: true, color: C.accent1 });
-    T(s, [BR(h, { bold: true, fontSize: 20 }), R(d, { fontSize: 15, color: C.text2 })], { x, y: 3.6, w: 3.7, h: 1.2 });
+    T(s, String(i + 1).padStart(2, "0"), { x, y: 3.2, w: 1.0, h: 0.6, fontSize: 30, bold: true, color: C.accent1 });
+    T(s, [BR(h, { bold: true, fontSize: 20 }), R(d, { fontSize: 15, color: C.text2 })], { x, y: 3.9, w: 3.7, h: 1.2 });
   });
 }
 addReferenceSlides();
