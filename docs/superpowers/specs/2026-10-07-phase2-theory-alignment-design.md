@@ -87,7 +87,7 @@
 
 ## 7. 범위 밖 — 덱·위키 보완 요청 (팀원에게 전달)
 - 클러스터 강건 SE와 HTE는 앱 사례(당근·토스)에 쓰이지만 덱에 없다.
-- `docs/ab-testing/05-experimentation-platform.md`의 3.2절이 아직 작성되지 않았다.
+- `docs/ab-testing/11-experimentation-platform.md`의 3.2절이 아직 작성되지 않았다.
 - 위키는 Ch2 전반(01~05)만 있고 Ch3~4 위키 문서가 없어서, 해당 배지는 위키 링크 없이 슬라이드 번호만 보여 준다.
 
 ## 개정 (2026-10-07, 새 이론 반영)

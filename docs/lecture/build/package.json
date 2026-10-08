@@ -1,0 +1,12 @@
+{
+  "name": "ab-testing-theory-deck",
+  "private": true,
+  "description": "A/B 테스트 이론 파트 PPT 생성 스크립트",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "pptxgenjs": "^4.0.1"
+  }
+}

@@ -20,6 +20,7 @@ DA 트랙 A/B 테스트 실습 세션용 웹앱. 조마다 실제 테크 기업 
 - GitHub 위키에서는 문단 구분, 목록 들여쓰기, 제목 주변 공백과 내부 내비게이션을 정리해 읽기 쉽게 만든다.
 
 ## 강의 PPT 작성 규칙 (`docs/lecture/*.pptx`)
+- 이론 PPT는 `docs/lecture/build/build.js`로 생성한다. PPT 파일을 직접 고치지 말고 스크립트를 고친 뒤 `npm run build`로 다시 만든다 (사용법은 `docs/lecture/build/README.md`).
 - 글씨 크기는 아래 단계만 쓴다. 새 슬라이드도 같은 단계에 맞춘다.
 
 | 역할 | 크기 | 예 |
