@@ -13,7 +13,7 @@ import { RevealCard } from "./review/RevealCard";
 import { TeamReviewCard } from "./review/TeamReviewCard";
 import { StatusBadge } from "./StatusBadge";
 import { StepView } from "./StepView";
-import { Badge, Button, Card, ErrorText } from "./ui";
+import { Badge, Button, Card, ErrorText, PhaseIntro } from "./ui";
 
 export function TeamScreen({ code, teamId }: { code: string; teamId: string }) {
   const { cls, teams, steps, error, loading } = useClassLive(code);
@@ -94,6 +94,7 @@ export function TeamScreen({ code, teamId }: { code: string; teamId: string }) {
             active === "s7_lab" ? (
               <div className="mt-4">
                 {steps.s7_lab === "locked" && <p className="mb-3 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">강사님이 이 스텝을 열면 진행할 수 있어요. (계산은 미리 해 봐도 돼요.)</p>}
+                <PhaseIntro intro={clientCase?.stepIntro?.s7_lab} />
                 <TrapLab />
               </div>
             ) : !me.case_key ? (
@@ -103,7 +104,10 @@ export function TeamScreen({ code, teamId }: { code: string; teamId: string }) {
             ) : (
               <div className="mt-4">
                 {active === "s8_share" ? (
-                  <ShareStep code={code} teamId={teamId} teamName={me.name} client={clientCase} status={steps.s8_share ?? "locked"} adapter={adapter} />
+                  <>
+                    <PhaseIntro intro={clientCase.stepIntro?.s8_share} />
+                    <ShareStep code={code} teamId={teamId} teamName={me.name} client={clientCase} status={steps.s8_share ?? "locked"} adapter={adapter} />
+                  </>
                 ) : (
                   <>
                     <StepView key={active} client={clientCase} step={active} status={steps[active] ?? "locked"} adapter={adapter} />

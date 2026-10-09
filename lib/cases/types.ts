@@ -3,13 +3,35 @@ import type { ZodType } from "zod";
 import type { CaseKey } from "../cases";
 import type { StepKey } from "../steps";
 import type { Readout } from "../sim/core/readout";
-import type { TheoryKey } from "../theory";
+import type { TheoryChapter, TheoryKey } from "../theory";
 
 export type PhaseKind = "diagnose" | "design" | "run" | "readout" | "decide";
 
-export type PhaseDef = { key: string; step: StepKey; title: string; kind: PhaseKind };
+/** "왜 이 선택지?" 한 줄. src 는 덱 챕터(1~5) 또는 사례 문서("case"). 슬라이드 제목·위키 편·원문 조각은 두지 않는다. */
+export type Why = { text: string; src: TheoryChapter | "case" };
 
-export type FieldOption = { value: string | number | boolean; label: string; desc?: string };
+/** Phase(또는 s7·s8 스텝) 머리의 다리 문장 */
+export type PhaseIntro = {
+  /** 다리 문장(보통 2~3줄, P1 설계만 사용자 결정으로 4줄) */
+  lines: Why[];
+  /** 개념 라벨로 보여 줄 개념(선택). revealOnly 개념이면 챕터만 보여 준다. */
+  theory?: TheoryKey[];
+};
+
+export type PhaseDef = {
+  key: string;
+  step: StepKey;
+  title: string;
+  kind: PhaseKind;
+  intro?: PhaseIntro;
+  /** 실행 버튼별 한 줄: run 은 aa·main, readout 은 main("결과 보기") */
+  actionWhy?: Partial<Record<"aa" | "main", Why>>;
+};
+
+/** Phase 가 없어 다리 문장을 사례 정의에 따로 두는 공통 스텝 */
+export type StepIntroKey = "s7_lab" | "s8_share";
+
+export type FieldOption = { value: string | number | boolean; label: string; desc?: string; why?: Why };
 
 /** designSchema 와 함께 폼을 자동 렌더링하는 데 쓰는 입력란 메타. 문구는 해요체. */
 export type FieldMeta = {
@@ -18,6 +40,9 @@ export type FieldMeta = {
   label: string;
   help?: string;
   type: "text" | "textarea" | "number" | "select" | "multiselect" | "boolean";
+  /** 입력란 자체가 왜 있는지(목적). help 는 '무엇을 입력하나', why 는 '왜 묻나'. */
+  why?: Why;
+  /** boolean 도 받을 수 있다: [{ value: true, label: "예", why }, { value: false, label: "아니요", why }] */
   options?: FieldOption[];
   min?: number;
   max?: number;
@@ -25,7 +50,7 @@ export type FieldMeta = {
   unit?: string;
 };
 
-export type DecisionOption = { id: string; label: string; desc: string };
+export type DecisionOption = { id: string; label: string; desc: string; why?: Why };
 /** 결정과 함께 적는 추가 글칸(예: 공지 초안). 필수. */
 export type DecisionField = { name: string; label: string; help?: string };
 export type DecisionDef = {
@@ -33,6 +58,8 @@ export type DecisionDef = {
   fields?: DecisionField[];
   /** 이 결정 전에 설계가 제출돼 있어야 하는 Phase(기본: 같은 Phase). 설계가 없는 최종 결정은 앞 Phase 를 가리킨다. */
   requires?: string;
+  /** '결정한 근거' 글칸의 목적 */
+  rationaleWhy?: Why;
 };
 
 export interface CasePlugin<D = unknown> {
@@ -53,6 +80,8 @@ export interface CasePlugin<D = unknown> {
   designSchema: Record<string, ZodType>;
   formMeta: Record<string, FieldMeta[]>;
   decisions: Record<string, DecisionDef>;
+  /** Phase 가 없는 s7·s8 의 다리 문장(선택) */
+  stepIntro?: Partial<Record<StepIntroKey, PhaseIntro>>;
   /** 폼의 초기값. prev 는 같은 사례의 앞 Phase 에서 제출한 설계(있으면 이어받는다). */
   defaultDesign(phase: string, prev?: Record<string, unknown>): Record<string, unknown>;
   /** 설계가 유효하지 않으면 SimulationRejected 를 던진다 */

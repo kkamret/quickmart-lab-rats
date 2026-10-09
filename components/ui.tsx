@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { NEUTRAL_BADGE_TITLE, STEP_THEORY, TITLED_STEPS, theoryBadge, theoryLabel, theoryChapterOnly, type TheoryKey } from "@/lib/theory";
+import type { PhaseIntro as PhaseIntroDef, Why } from "@/lib/cases/types";
+import { introTheoryLabel, NEUTRAL_BADGE_TITLE, STEP_THEORY, TITLED_STEPS, theoryBadge, theoryLabel, theoryChapterOnly, whyBadge, whyBadgeTitle, type TheoryKey } from "@/lib/theory";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-2xl border border-line bg-surface p-5 ${className}`}>{children}</div>;
@@ -54,6 +55,31 @@ export function ErrorText({ children }: { children: ReactNode }) {
 /** 입력란·경고 옆 회색 소형 배지: "Ch2" */
 export function TheoryBadge({ k, reveal = false }: { k: TheoryKey; reveal?: boolean }) {
   return <span title={reveal ? theoryLabel(k) : NEUTRAL_BADGE_TITLE} className="ml-1.5 rounded bg-sunk px-1.5 py-0.5 align-middle text-[10px] font-medium text-ink3">{theoryBadge(k)}</span>;
+}
+
+/**
+ * "왜 이 선택지?" 한 줄: 본문 뒤에 근거 배지(TheoryBadge 와 같은 모양, "Ch3" 또는 "사례").
+ * lead 가 있으면 앞에 굵은 머리말("왜 묻나요" 등). label·span 안에도 들어가도록 block span 으로 그린다.
+ */
+export function WhyLine({ why, lead, className = "" }: { why: Why; lead?: string; className?: string }) {
+  return (
+    <span className={`block text-xs text-ink2 ${className}`}>
+      {lead && <strong className="mr-1.5 font-semibold">{lead}</strong>}
+      {why.text}
+      <span title={whyBadgeTitle(why.src)} className="ml-1.5 rounded bg-sunk px-1.5 py-0.5 align-middle text-[10px] font-medium text-ink3">{whyBadge(why.src)}</span>
+    </span>
+  );
+}
+
+/** Phase(또는 s7·s8) 머리의 다리 문장 2~3줄 + (있으면) 개념 라벨 줄. revealOnly 개념은 챕터만 보여 준다. */
+export function PhaseIntro({ intro }: { intro?: PhaseIntroDef }) {
+  if (!intro?.lines.length) return null;
+  return (
+    <div className="mb-4 space-y-1 rounded-lg border border-line px-3 py-2">
+      {intro.lines.map((l) => <WhyLine key={l.text} why={l} />)}
+      {intro.theory?.length ? <span className="block text-xs text-ink3">{intro.theory.map(introTheoryLabel).join(" · ")}</span> : null}
+    </div>
+  );
 }
 
 /** 스텝 상단 한 줄: "이론 복습: Ch2 · 가설 문장 구조 · …" */

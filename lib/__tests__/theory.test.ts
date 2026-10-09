@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_THEORY, NEUTRAL_BADGE_TITLE, STEP_THEORY, THEORY, TITLED_STEPS, theoryBadge, theoryChapterOnly, theoryLabel, theoryNote, type TheoryKey } from "../theory";
+import { CASE_BADGE_TITLE, FIELD_THEORY, NEUTRAL_BADGE_TITLE, STEP_THEORY, THEORY, TITLED_STEPS, introTheoryLabel, theoryBadge, theoryChapterOnly, theoryLabel, theoryNote, whyBadge, whyBadgeTitle, type TheoryKey } from "../theory";
 import { STEP_KEYS } from "../steps";
 import { getClientCase } from "../cases/client-registry";
 import { CASE_KEYS } from "../cases";
@@ -97,9 +97,21 @@ describe("스포일러 방지와 풀이 문구", () => {
   });
   it("개념 풀이(note) 문장이 사례 폼의 라벨·도움말·선택지 설명에 그대로 들어 있지 않다", () => {
     const texts: string[] = [];
-    for (const c of CASE_KEYS) for (const list of Object.values(getClientCase(c)!.formMeta)) for (const f of list) {
-      texts.push(f.label, f.help ?? "");
-      for (const o of f.options ?? []) texts.push(o.label, o.desc ?? "");
+    for (const c of CASE_KEYS) {
+      const cc = getClientCase(c)!;
+      for (const list of Object.values(cc.formMeta)) for (const f of list) {
+        texts.push(f.label, f.help ?? "", f.why?.text ?? "");
+        for (const o of f.options ?? []) texts.push(o.label, o.desc ?? "", o.why?.text ?? "");
+      }
+      for (const d of Object.values(cc.decisions)) {
+        texts.push(d.rationaleWhy?.text ?? "");
+        for (const o of d.options) texts.push(o.why?.text ?? "");
+      }
+      for (const p of cc.phases) {
+        for (const l of p.intro?.lines ?? []) texts.push(l.text);
+        for (const a of Object.values(p.actionWhy ?? {})) texts.push(a?.text ?? "");
+      }
+      for (const s of Object.values(cc.stepIntro ?? {})) for (const l of s?.lines ?? []) texts.push(l.text);
     }
     for (const k of KEYS) {
       const note = theoryNote(k);
@@ -126,6 +138,67 @@ describe("스포일러 방지와 풀이 문구", () => {
     for (const k of REVEAL_ONLY) {
       expect(theoryBadge(k), k).toMatch(/^Ch\d$/);
       expect(theoryChapterOnly(k), k).toMatch(/^Ch\d$/);
+    }
+  });
+});
+
+/** 사례마다 Phase·스텝 다리 문장(stepIntro)을 [위치, intro] 로 모은다 */
+function intros() {
+  return CASE_KEYS.flatMap((c) => {
+    const cc = getClientCase(c)!;
+    return [
+      ...cc.phases.flatMap((p) => (p.intro ? [{ where: `${c}:${p.key}`, step: p.step as string, intro: p.intro }] : [])),
+      ...Object.entries(cc.stepIntro ?? {}).flatMap(([step, intro]) => (intro ? [{ where: `${c}:${step}`, step, intro }] : [])),
+    ];
+  });
+}
+
+describe("선택지 근거 줄과 다리 문장의 이론 표시", () => {
+  it("다리 문장의 개념 키는 모두 THEORY 에 있다", () => {
+    for (const { where, intro } of intros()) for (const k of intro.theory ?? []) expect(THEORY[k], `${where}:${k}`).toBeDefined();
+  });
+  it("다리 문장 개념 라벨: revealOnly 개념은 챕터만, 그 밖은 챕터 · 이름", () => {
+    expect(introTheoryLabel("hypothesis")).toBe(theoryLabel("hypothesis"));
+    expect(introTheoryLabel("trigger")).toMatch(/^Ch\d$/);
+    for (const k of REVEAL_ONLY) expect(introTheoryLabel(k), k).toMatch(/^Ch\d$/);
+    for (const { where, intro } of intros()) for (const k of intro.theory ?? []) {
+      if (REVEAL_ONLY.includes(k)) expect(introTheoryLabel(k), `${where}:${k}`).toMatch(/^Ch\d$/);
+      else expect(introTheoryLabel(k), `${where}:${k}`).toBe(theoryLabel(k));
+    }
+  });
+  it("revealOnly 개념은 s7_lab 밖의 다리 문장 개념 라벨에 들어가지 않는다", () => {
+    for (const { where, step, intro } of intros()) {
+      if (step === "s7_lab") continue;
+      for (const k of intro.theory ?? []) expect(REVEAL_ONLY, `${where}:${k}`).not.toContain(k);
+    }
+  });
+  it("근거 배지는 Ch1~Ch5 또는 '사례'만 그리고, 툴팁에 개념 이름이 없다", () => {
+    expect(whyBadge(3)).toBe("Ch3");
+    expect(whyBadge("case")).toBe("사례");
+    expect(whyBadgeTitle(2)).toBe(NEUTRAL_BADGE_TITLE);
+    expect(whyBadgeTitle("case")).toBe(CASE_BADGE_TITLE);
+    const srcs = new Set<number | string>();
+    for (const c of CASE_KEYS) {
+      const cc = getClientCase(c)!;
+      for (const list of Object.values(cc.formMeta)) for (const f of list) {
+        if (f.why) srcs.add(f.why.src);
+        for (const o of f.options ?? []) if (o.why) srcs.add(o.why.src);
+      }
+      for (const d of Object.values(cc.decisions)) {
+        if (d.rationaleWhy) srcs.add(d.rationaleWhy.src);
+        for (const o of d.options) if (o.why) srcs.add(o.why.src);
+      }
+      for (const p of cc.phases) {
+        for (const l of p.intro?.lines ?? []) srcs.add(l.src);
+        for (const a of Object.values(p.actionWhy ?? {})) if (a) srcs.add(a.src);
+      }
+      for (const s of Object.values(cc.stepIntro ?? {})) for (const l of s?.lines ?? []) srcs.add(l.src);
+    }
+    expect(srcs.size).toBeGreaterThan(1);
+    for (const s of srcs) {
+      const badge = whyBadge(s as 1 | 2 | 3 | 4 | 5 | "case");
+      expect(badge, String(s)).toMatch(/^(Ch[1-5]|사례)$/);
+      for (const k of KEYS) expect(whyBadgeTitle(s as 1 | 2 | 3 | 4 | 5 | "case"), `${s}:${k}`).not.toContain(THEORY[k].title);
     }
   });
 });

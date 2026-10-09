@@ -8,7 +8,7 @@ import type { TeamReadout } from "@/lib/sim/core/readout";
 import { getCaseUi } from "./cases/registry";
 import { AutoForm } from "./form/AutoForm";
 import { ReadoutView } from "./readout/ReadoutView";
-import { Badge, Button, Card, ErrorText, inputClass, TheoryNote } from "./ui";
+import { Badge, Button, Card, ErrorText, inputClass, PhaseIntro, TheoryNote, WhyLine } from "./ui";
 
 type Obj = Record<string, unknown>;
 type RunKey = string; // `${phaseKey}:${mode}`
@@ -51,6 +51,7 @@ export function StepView({ client, step, status, adapter }: { client: ClientCase
             <h2 className="text-xl font-bold">{def.title}</h2>
             <SavedBadge ctx={ctx} def={def} />
           </div>
+          <PhaseIntro intro={def.intro} />
           <Phase ctx={ctx} def={def} />
         </Card>
       ))}
@@ -169,6 +170,14 @@ function RunPhase({ ctx, def, hasDesign, modes }: { ctx: Ctx; def: PhaseDef; has
           </div>
         )}
       </div>
+      {modes.some((m) => def.actionWhy?.[m]) && (
+        <div className="space-y-1">
+          {modes.map((m) => {
+            const why = def.actionWhy?.[m];
+            return why ? <WhyLine key={m} why={why} lead={label(m)} /> : null;
+          })}
+        </div>
+      )}
       {result && "error" in result && <ErrorText>{result.error}</ErrorText>}
       {result && !("error" in result) && (
         <ReadoutView readout={result} series={series} periodUnit={periodUnit} armLabels={{ ...baseLabels, ...(armLabelsOf?.(result.panels) ?? {}) }}>{Panels && <Panels phase={def.key} panels={result.panels} />}</ReadoutView>
@@ -210,12 +219,17 @@ function DecidePhase({ ctx, sim, hasDesign }: { ctx: Ctx; sim: string; hasDesign
         {options.map((o) => (
           <label key={o.id} className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${option === o.id ? "border-brand bg-brand-soft" : "border-line bg-sunk"} ${editable ? "" : "opacity-60"}`}>
             <input type="radio" name={`decide-${sim}`} checked={option === o.id} disabled={!editable} onChange={() => setOption(o.id)} className="mt-1" />
-            <span><b className="block text-sm">{o.label}</b><span className="text-xs text-ink2">{o.desc}</span></span>
+            <span>
+              <b className="block text-sm">{o.label}</b>
+              <span className="text-xs text-ink2">{o.desc}</span>
+              {o.why && <WhyLine why={o.why} lead="왜 이 선택지?" className="mt-1" />}
+            </span>
           </label>
         ))}
       </div>
       <div>
         <label htmlFor={`rat-${sim}`} className="mb-1 block text-sm font-semibold">결정한 근거</label>
+        {def?.rationaleWhy && <WhyLine why={def.rationaleWhy} lead="왜 묻나요" className="mb-1.5" />}
         <textarea id={`rat-${sim}`} rows={3} className={inputClass} value={rationale} disabled={!editable} onChange={(e) => setRationale(e.target.value)} />
       </div>
       {fields.map((f) => (
