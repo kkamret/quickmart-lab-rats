@@ -30,9 +30,9 @@ export const daangnMeta = {
     "실험 문서와 가설", "트리거 기반 배정", "ITT vs 트리거 분석", "A/A 테스트", "SRM", "배정 키 불일치로 인한 오염", "해싱과 salt",
     "계측 신뢰성과 데이터 소스", "신규 사용자와 외적 타당성", "지표 정의(Goodhart)", "품질 Guardrail", "양면 시장과 간섭", "클러스터 배정과 강건 SE", "Data-informed decision",
   ],
-  theory: ["hypothesis", "trigger", "aa_test", "srm", "goodhart", "unit", "analysis_unit", "contamination", "interference", "interference_fix", "alpha_power", "mde", "driver", "hashing", "identifier", "data_informed"] as TheoryKey[],
+  theory: ["hypothesis", "trigger", "aa_test", "srm", "goodhart", "unit", "analysis_unit", "contamination", "interference", "interference_fix", "alpha_power", "mde", "driver", "hashing", "identifier", "data_informed", "twyman"] as TheoryKey[],
   /** 덱·위키에 설명이 없는 개념 이름. 정답 공개 뒤에만 이름으로 보여 준다. */
-  outsideTheory: ["신규 사용자 처리", "트위먼의 법칙"] as string[],
+  outsideTheory: ["신규 사용자 처리"] as string[],
 };
 
 export const daangnClient: ClientCase = {
