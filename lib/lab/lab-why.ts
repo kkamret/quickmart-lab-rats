@@ -19,7 +19,7 @@ export const TRAP_LAB_WHY = {
   } as Record<7 | 14 | 28, Why>,
   peekingRun: w("효과가 전혀 없는 A/A를 여러 번 돌려야 '유의'가 얼마나 자주 나오는지 셀 수 있어요.", 3),
   simpsonPool: w("전체 결과예요. 기간별 결과와 방향이 같은지 비교하려고 둬요.", 4),
-  simpsonSplit: w("배정 비율이 다른 기간을 나눠 봐요. 그룹 구성이 다르면 배정 문제의 신호예요.", 4),
+  simpsonSplit: w("배정 비율이 다른 기간을 나눠 봐요. 기간마다 두 그룹의 구성이 다르면, 합친 결과가 방향을 뒤집을 수 있어요.", 4),
   srmA: SRM_COUNT_WHY,
   srmB: SRM_COUNT_WHY,
   srmRatio: w("실험 전에 정한 배정 비율이 기대 비율이 돼요. 관측 비율이 이와 통계적으로 맞는지 봐요.", 4),

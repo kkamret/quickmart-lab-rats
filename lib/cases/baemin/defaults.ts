@@ -22,7 +22,8 @@ export function defaultDesign(phase: string, prev?: Obj): Obj {
   const sim = phase.slice(0, 2);
   if (phase === "diagnose") return { rationale: "" };
   if (sim === "p1") return { ...blankP1(), ...(prev && prev.phase === "p1" ? prev : {}) };
-  const base = { ...blankP1(), ...(prev ?? {}) };
+  // 가설은 단계마다 새로 쓴다: P2 는 P1 과 같은 Treatment 를 넓히는 단계라 이어받고, P3·P4 는 다른 Treatment 라 비워 둔다.
+  const base: Obj = { ...blankP1(), ...(prev ?? {}), ...(sim === "p3" || sim === "p4" ? { hypothesis: blankP1().hypothesis } : {}) };
   if (sim === "p2") return { ...base, phase: "p2", scope: { os: "all", surface: "all" }, count_basis: "exposure" };
   if (sim === "p3") {
     return {

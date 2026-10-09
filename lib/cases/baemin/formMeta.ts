@@ -16,6 +16,9 @@ const METRIC_OPTIONS: FieldOption[] = [
   { value: "min_reach", label: "최소주문금액 도달률", desc: "장바구니 사용자 중 최소주문금액을 채운 비율" },
 ];
 
+/** 지표 키 → 화면 이름. 폼·지표 표·세그먼트 표가 같은 이름을 쓰게 한다. */
+export const METRIC_LABELS: Record<string, string> = Object.fromEntries(METRIC_OPTIONS.map((o) => [String(o.value), o.label]));
+
 const PCT_METRICS = new Set<string>(["aov", "gmv", "load_time"]);
 const MDE_HELP = METRIC_OPTIONS.map((o) => `${o.label} ${BUSINESS_MDE_PP[o.value as MetricKey]}${PCT_METRICS.has(String(o.value)) ? "%" : "%p"}`).join(", ");
 
@@ -56,8 +59,8 @@ const common: FieldMeta[] = [
     name: "power", label: "검정력", help: "높게 잡을수록 실제 효과를 놓칠 가능성이 줄지만 표본과 기간이 늘어요.", type: "select",
     options: [{ value: 0.7, label: "70%" }, { value: 0.8, label: "80%" }, { value: 0.9, label: "90%" }],
   },
-  { name: "duration_days", label: "실험 기간", help: "7일 미만은 입력할 수 없어요.", type: "number", min: 7, max: 28, step: 1, unit: "일" },
-  { name: "allocation", label: "투입 비율", help: "범위 트래픽 중 실험에 쓰는 비율", type: "number", min: 0.05, max: 1, step: 0.05 },
+  { name: "duration_days", label: "실험 기간", help: "7일 이상 28일 이하의 정수로 입력해요.", type: "number", min: 7, max: 28, step: 1, unit: "일" },
+  { name: "allocation", label: "투입 비율", help: "범위 트래픽 중 실험에 쓰는 비율이에요. 0.05~1 사이로 입력해요 (0.5 = 50%, 1 = 100%).", type: "number", min: 0.05, max: 1, step: 0.05, unit: "(1 = 100%)" },
   {
     name: "ramp", label: "램프업", help: "같은 표본이면 A:B를 50:50으로 나눌 때 가장 효율적이고, B를 10%만 노출하는 건 위험 관리용이에요. 대신 B 표본이 천천히 쌓여요.", type: "select",
     options: [
@@ -114,7 +117,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
   p4: [
     ...common,
     {
-      name: "arms", label: "실험 그룹", help: "A 는 대조군, B 는 항상 노출, C 는 부족 금액이 8천 원 이하일 때만 노출해요. A/B/n 은 대조군 하나에 실험군을 둘 이상 두고 비교하는 형태예요.", type: "multiselect",
+      name: "arms", label: "실험 그룹", help: "A는 대조군, B는 항상 노출, C는 부족 금액이 8천 원 이하일 때만 노출해요. A/B/n은 대조군 하나에 실험군을 둘 이상 두고 비교하는 형태예요.", type: "multiselect",
       options: [{ value: "A", label: "A (대조군)" }, { value: "B", label: "B (항상 노출)" }, { value: "C", label: "C (부족 금액 8천 원 이하만)" }],
     },
     {

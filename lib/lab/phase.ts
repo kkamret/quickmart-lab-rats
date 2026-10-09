@@ -34,6 +34,18 @@ export function latestOf(subs: Submission[], phase: string, kind: SubmissionKind
   return subs.filter((s) => s.phase === phase && s.kind === kind).sort((a, b) => b.version - a.version)[0];
 }
 
+/** 검증에 실패한 입력란 이름(formMeta 의 name). 'metrics.primary' 처럼 더 깊은 경로는 가장 가까운 부모 입력란으로 올려 잡는다. */
+export function issueFieldNames(issues: { path: PropertyKey[] }[], meta: FieldMeta[]): string[] {
+  const names = new Set<string>();
+  for (const i of issues) {
+    for (let n = i.path.length; n > 0; n--) {
+      const name = i.path.slice(0, n).join(".");
+      if (meta.some((m) => m.name === name)) { names.add(name); break; }
+    }
+  }
+  return [...names];
+}
+
 /** zod 오류를 폼 라벨 기준의 한국어 문장으로 바꾼다. 직접 쓴 한국어 메시지는 그대로 쓴다. */
 export function formatIssues(issues: { path: PropertyKey[]; message: string }[], meta: FieldMeta[]): string[] {
   const label = (path: PropertyKey[]) => {

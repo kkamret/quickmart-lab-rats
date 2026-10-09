@@ -66,7 +66,9 @@ export function WhyLine({ why, lead, className = "" }: { why: Why; lead?: string
     <span className={`block text-xs text-ink2 ${className}`}>
       {lead && <strong className="mr-1.5 font-semibold">{lead}</strong>}
       {why.text}
-      <span title={whyBadgeTitle(why.src)} className="ml-1.5 rounded bg-sunk px-1.5 py-0.5 align-middle text-[10px] font-medium text-ink3">{whyBadge(why.src)}</span>
+      <span title={whyBadgeTitle(why.src)} className="ml-1.5 whitespace-nowrap rounded bg-sunk px-1.5 py-0.5 align-middle text-[11px] font-medium text-ink3">
+        {why.src === "case" ? "사례 문서" : `이론 ${whyBadge(why.src)}`}
+      </span>
     </span>
   );
 }

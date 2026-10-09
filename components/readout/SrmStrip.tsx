@@ -1,5 +1,5 @@
 import type { Readout } from "@/lib/sim/core/readout";
-import { fmtInt, fmtP } from "./format";
+import { fmtInt, fmtPText } from "./format";
 import { TheoryBadge } from "../ui";
 
 /**
@@ -16,7 +16,7 @@ export function SrmStrip({ srm, arms }: { srm: NonNullable<Readout["srm"]>; arms
             {arms[i]} <b>{fmtInt(c)}</b>명 <span className="text-ink3">(계획 {(srm.ratios[i] * 100).toFixed(1)}% · 실제 {((c / srm.counts.reduce((s, x) => s + x, 0)) * 100).toFixed(1)}%)</span>
           </span>
         ))}
-        <span className="tabular-nums">비율 검정 p <b>{fmtP(srm.p)}</b></span>
+        <span className="tabular-nums">비율 검정 <b>{fmtPText(srm.p)}</b></span>
       </div>
       <p className="mt-1 text-xs text-ink3">실제 배정이 계획한 비율과 다른지 확인하는 검정이에요. 지표를 읽기 전에 먼저 살펴보세요.</p>
     </div>

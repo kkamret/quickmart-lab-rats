@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { fmtInt, fmtP, fmtPct } from "@/components/readout/format";
+import { fmtInt, fmtP, fmtPct, fmtPText } from "@/components/readout/format";
 import { Button, Card, TheoryBadge, WhyLine, inputClass } from "@/components/ui";
 import type { Why } from "@/lib/cases/types";
 import { TRAP_LAB_WHY } from "@/lib/lab/lab-why";
@@ -151,7 +151,7 @@ function SrmCalc() {
       {res.ok ? (
         <div className={`mt-3 rounded-lg p-3 text-sm ${res.srm ? "bg-neg-soft" : "bg-pos-soft"}`}>
           <b>{res.srm ? "SRM이 의심돼요" : "배정 비율이 설계와 맞아요"}</b>
-          <span className="ml-2 tabular-nums">A {fmtInt(res.a)}명 ({fmtPct(res.shareA)}) · B {fmtInt(res.b)}명 ({fmtPct(res.shareB)}) · p = {fmtP(res.p)}</span>
+          <span className="ml-2 tabular-nums">A {fmtInt(res.a)}명 ({fmtPct(res.shareA)}) · B {fmtInt(res.b)}명 ({fmtPct(res.shareB)}) · {fmtPText(res.p)}</span>
         </div>
       ) : (
         <p role="alert" className="mt-3 text-sm text-neg">{res.error}</p>

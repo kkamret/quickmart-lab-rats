@@ -17,7 +17,7 @@ export function DemoCase({ caseKey }: { caseKey: CaseKey }) {
   const [epoch, setEpoch] = useState(0);
 
   return (
-    <div className="grid min-h-screen md:grid-cols-[252px_minmax(0,1fr)]">
+    <div className="grid min-h-screen grid-cols-[minmax(0,1fr)] md:grid-cols-[252px_minmax(0,1fr)]">
       <nav className="border-b border-line bg-surface p-4 md:sticky md:top-0 md:h-screen md:overflow-auto md:border-b-0 md:border-r">
         <div className="mb-4 flex items-center gap-2.5 px-2">
           <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-brand text-sm font-bold text-white">Q</div>
@@ -26,12 +26,12 @@ export function DemoCase({ caseKey }: { caseKey: CaseKey }) {
             <small className="text-xs text-ink3">DB 없이 확인하는 화면</small>
           </div>
         </div>
-        <ul className="space-y-0.5">
+        <ul className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 md:mx-0 md:block md:space-y-0.5 md:overflow-visible md:p-0">
           {DEMO_STEPS.map((k, i) => (
-            <li key={k}>
+            <li key={k} className="shrink-0 md:shrink">
               <button
                 onClick={() => setActive(k)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm ${active === k ? "bg-brand-soft font-semibold text-ink" : "text-ink2 hover:bg-sunk"}`}
+                className={`flex w-full items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 py-2 text-left text-sm ${active === k ? "bg-brand-soft font-semibold text-ink" : "text-ink2 hover:bg-sunk"}`}
               >
                 <span className="w-5 text-xs text-ink3">{i + 1}</span>
                 {STEP_LABELS[k]}
@@ -40,10 +40,14 @@ export function DemoCase({ caseKey }: { caseKey: CaseKey }) {
           ))}
         </ul>
         <div className="mt-6 px-2">
-          <Button variant="ghost" className="w-full" onClick={() => { resetDemo(caseKey); setEpoch((e) => e + 1); }}>데모 초기화</Button>
+          <Button variant="ghost" className="w-full" onClick={() => {
+              if (!window.confirm("이 브라우저에 저장된 데모 제출을 모두 지워요. 계속할까요?")) return;
+              resetDemo(caseKey);
+              setEpoch((e) => e + 1);
+            }}>데모 초기화</Button>
         </div>
       </nav>
-      <main className="px-4 pb-20 md:px-9">
+      <main className="min-w-0 px-4 pb-20 md:px-9">
         <div className="mx-auto max-w-4xl">
           <p className="mt-4 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">
             데모 모드예요. 제출한 내용은 이 브라우저에만 저장되고, 실제 수업(조·강사·Realtime)과는 연결되지 않아요.
