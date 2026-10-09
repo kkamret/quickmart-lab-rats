@@ -12,6 +12,9 @@ describe("resolveLLMConfig", () => {
     expect(c.model).toBe("gemini-2.5-flash");
     expect(c.upstage).toBe(false);
   });
+  it("AQ. 로 시작하는 키도 Gemini", () => {
+    expect(resolveLLMConfig({ UPSTAGE_API_KEY: "AQ.Ab8x" })!.model).toBe("gemini-2.5-flash");
+  });
   it("그 외 키는 Solar", () => {
     const c = resolveLLMConfig({ UPSTAGE_API_KEY: "up_x" })!;
     expect(c.model).toBe("solar-pro4");

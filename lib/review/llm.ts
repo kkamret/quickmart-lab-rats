@@ -15,11 +15,11 @@ const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
 
 export type LLMConfig = { apiKey: string; baseURL: string; model: string; upstage: boolean };
 
-/** 키 하나로 공급자를 고른다. AIza 로 시작하면 Gemini(OpenAI 호환 주소), 아니면 Upstage Solar. LLM_BASE_URL·LLM_MODEL 로 덮어쓸 수 있다. */
+/** 키 하나로 공급자를 고른다. AIza·AQ. 로 시작하면 Gemini(OpenAI 호환 주소), 아니면 Upstage Solar. LLM_BASE_URL·LLM_MODEL 로 덮어쓸 수 있다. */
 export function resolveLLMConfig(env: Record<string, string | undefined>): LLMConfig | null {
   const apiKey = env.LLM_API_KEY || env.UPSTAGE_API_KEY;
   if (!apiKey) return null;
-  const gemini = apiKey.startsWith("AIza");
+  const gemini = apiKey.startsWith("AIza") || apiKey.startsWith("AQ.");
   const baseURL = env.LLM_BASE_URL || (gemini ? GEMINI_URL : SOLAR_URL);
   return {
     apiKey,
