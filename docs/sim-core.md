@@ -61,16 +61,19 @@ type Readout = {
 export interface CasePlugin<D> {
   key: 'baemin'|'toss'|'daangn'|'netflix'
   meta: { title; company; sourceUrl; sourceTitle; difficulty: 1|2|3|4; concepts: string[] }
-  phases: { key: string; step: StepKey; title: string; kind: 'diagnose'|'design'|'run'|'readout'|'decide' }[]
+  phases: { key: string; step: StepKey; title: string; kind: 'diagnose'|'design'|'run'|'readout'|'decide'
+            intro?: PhaseIntro; actionWhy?: { aa?: Why; main?: Why } }[]   // 다리 문장, 실행 버튼 한 줄(선택)
   designSchema: Record<string /*phase*/, ZodSchema>      // 입력란별 폼 자동 생성에 사용
-  formMeta: Record<string, FieldMeta[]>                   // 라벨, 도움말, 선택지 설명(해요체)
+  formMeta: Record<string, FieldMeta[]>                   // 라벨, 도움말, 선택지 설명(해요체), why?(입력란 목적)·options[].why?(보기 한 줄)
   simulate(phase: string, design: D, ctx: { prior: Record<string, Readout> }): Readout
   rubric: Record<string /*phase*/, string>                // docs/cases/<case>.md의 루브릭을 빌드 시 임베드
-  decisions: Record<string, { options: { id; label; desc }[] }>
+  decisions: Record<string, { options: { id; label; desc; why? }[]; rationaleWhy? }>
+  stepIntro?: { s7_lab?: PhaseIntro; s8_share?: PhaseIntro }   // Phase 가 없는 공통 스텝의 다리 문장(선택)
   reveal: Record<string, string>                          // 정답 공개 후 보여줄 원문 비교 해설
 }
 ```
 - 폼은 `designSchema + formMeta`로 자동 렌더링(공통 컴포넌트). 사례 전용 시각화는 `components/cases/<case>/`.
+- 선택지 근거: `Why = { text; src: 1~5 | 'case' }`, `PhaseIntro = { lines: Why[]; theory?: TheoryKey[] }`. 화면에는 문장과 챕터(`Ch3`) 또는 `사례` 배지만 보인다. 배민은 `lib/cases/baemin/why.ts`에 승인 문장을 모으고 `ui.ts`에서 붙인다(설계: `docs/superpowers/specs/2026-10-09-baemin-choice-rationale-design.md`). why 데이터가 없는 사례는 화면이 그대로다.
 - `ctx.prior`: 앞 Phase의 Readout(예: 당근 P2는 P1 A/A 결과를 참조).
 
 ## 6. 공통 스텝 뼈대 (강사가 한 번에 열고 닫음)
