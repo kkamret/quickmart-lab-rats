@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { RevealPayload } from "@/lib/reveal";
 import type { StepKey } from "@/lib/steps";
 import { theoryLabel, theoryNote, type TheoryKey } from "@/lib/theory";
+import { OUTSIDE_NOTES } from "@/lib/outside-notes";
 import { Badge, Card, ErrorText } from "../ui";
 
 /** 정답 공개 카드: 강사가 공개를 켠 뒤에만 보인다. 원문 비교 해설과, 이 조의 시뮬레이션이 심어 둔 함정을 알려준다. */
@@ -87,10 +88,15 @@ export function RevealCard({ code, teamId, step, theory, outsideTheory = [] }: {
       {outsideTheory.length > 0 && (
         <div className="mt-4">
           <h3 className="text-sm font-semibold">이론 수업 밖에서 처음 나온 개념</h3>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-ink2">
-            {outsideTheory.map((n) => <li key={n}>{n}</li>)}
+          <ul className="mt-1 space-y-1 text-sm text-ink2">
+            {outsideTheory.map((n) => (
+              <li key={n}>
+                <b>{n}</b>
+                {OUTSIDE_NOTES[n] && <span className="block text-xs text-ink3">{OUTSIDE_NOTES[n]}</span>}
+              </li>
+            ))}
           </ul>
-          <p className="mt-1 text-xs text-ink3">위 해설과 강사님 설명을 참고해 주세요.</p>
+          <p className="mt-1 text-xs text-ink3">이 앱에서 설명한 풀이예요.</p>
         </div>
       )}
     </Card>
