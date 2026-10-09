@@ -9,19 +9,38 @@ export interface ReviewLLM {
 }
 
 export const SOLAR_MODEL = "solar-pro4";
+export const GEMINI_MODEL = "gemini-2.5-flash";
+const SOLAR_URL = "https://api.upstage.ai/v1";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
 
-export function solarLLM(apiKey: string): ReviewLLM {
-  const client = new OpenAI({ apiKey, baseURL: "https://api.upstage.ai/v1", timeout: 60_000, maxRetries: 1 });
+export type LLMConfig = { apiKey: string; baseURL: string; model: string; upstage: boolean };
+
+/** 키 하나로 공급자를 고른다. AIza 로 시작하면 Gemini(OpenAI 호환 주소), 아니면 Upstage Solar. LLM_BASE_URL·LLM_MODEL 로 덮어쓸 수 있다. */
+export function resolveLLMConfig(env: Record<string, string | undefined>): LLMConfig | null {
+  const apiKey = env.LLM_API_KEY || env.UPSTAGE_API_KEY;
+  if (!apiKey) return null;
+  const gemini = apiKey.startsWith("AIza");
+  const baseURL = env.LLM_BASE_URL || (gemini ? GEMINI_URL : SOLAR_URL);
   return {
-    model: SOLAR_MODEL,
+    apiKey,
+    baseURL,
+    model: env.LLM_MODEL || (gemini ? GEMINI_MODEL : SOLAR_MODEL),
+    upstage: baseURL.includes("upstage.ai"),
+  };
+}
+
+export function openAICompatLLM(cfg: LLMConfig): ReviewLLM {
+  const client = new OpenAI({ apiKey: cfg.apiKey, baseURL: cfg.baseURL, timeout: 60_000, maxRetries: 1 });
+  return {
+    model: cfg.model,
     async complete({ system, user, maxTokens }) {
       const res = await client.chat.completions.create({
-        model: SOLAR_MODEL,
+        model: cfg.model,
         temperature: 0.3,
         max_tokens: maxTokens,
         response_format: { type: "json_object" },
-        // 추론 토큰이 max_tokens 를 잠식하지 않도록 낮게 (Upstage 확장 파라미터)
-        ...({ reasoning_effort: "low" } as object),
+        // 추론 토큰이 max_tokens 를 잠식하지 않도록 낮게 (Upstage 확장 파라미터, 다른 공급자에는 보내지 않는다)
+        ...(cfg.upstage ? ({ reasoning_effort: "low" } as object) : {}),
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
       });
       const choice = res.choices[0];
@@ -40,8 +59,8 @@ export function mockLLM(produce: () => unknown): ReviewLLM {
   };
 }
 
-/** UPSTAGE_API_KEY 가 있으면 Solar, 없으면 mock. 키는 서버에서만 읽는다(규칙 5). */
+/** 키(LLM_API_KEY 또는 UPSTAGE_API_KEY)가 있으면 실제 모델, 없으면 mock. 키는 서버에서만 읽는다(규칙 5). */
 export function getLLM(mockOutput: () => unknown): ReviewLLM {
-  const key = process.env.UPSTAGE_API_KEY;
-  return key ? solarLLM(key) : mockLLM(mockOutput);
+  const cfg = resolveLLMConfig(process.env);
+  return cfg ? openAICompatLLM(cfg) : mockLLM(mockOutput);
 }
