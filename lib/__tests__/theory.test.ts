@@ -25,6 +25,33 @@ describe("이론 개념 표", () => {
   });
 });
 
+describe("최종 덱(73장)과 챕터·이름 동기화", () => {
+  it("인터리빙은 Ch5 산업 사례에만 나온다", () => {
+    expect(THEORY.interleaving.chapter).toBe(5);
+    expect(theoryNote("interleaving")).toBeDefined();
+  });
+  it("무작위 배정은 Ch2 '무작위 배정 방식 설계'와 이름을 맞춘다(SUTVA는 Ch4 간섭)", () => {
+    expect(theoryLabel("randomization")).toBe("Ch2 · 무작위 배정 방식");
+    expect(THEORY.randomization.title).not.toContain("SUTVA");
+  });
+  it("트위먼의 법칙은 Ch3 개념이고 정답 공개 뒤에만 보인다", () => {
+    expect(theoryLabel("twyman")).toBe("Ch3 · 트위먼의 법칙");
+    expect("revealOnly" in THEORY.twyman).toBe(true);
+    expect(theoryNote("twyman")).toBe("흥미롭거나 이상할 만큼 좋은 숫자는 대개 틀렸으니, 기뻐하기 전에 데이터부터 확인해요.");
+  });
+  it("멀티암드 밴딧은 덱·위키 근거가 없어 이론 개념이 아니라 넷플릭스 이론 밖 개념이다", () => {
+    expect("bandit" in THEORY).toBe(false);
+    const m = getClientCase("netflix")!.meta;
+    expect(m.theory as string[]).not.toContain("bandit");
+    expect(m.outsideTheory).toContain("멀티암드 밴딧");
+  });
+  it("당근은 트위먼의 법칙을 이론 개념으로 연결하고 이론 밖 목록에서 뺀다", () => {
+    const m = getClientCase("daangn")!.meta;
+    expect(m.theory).toContain("twyman");
+    expect(m.outsideTheory).not.toContain("트위먼의 법칙");
+  });
+});
+
 describe("이론 연결 매핑", () => {
   it("FIELD_THEORY·STEP_THEORY 의 값은 모두 개념 표에 있다", () => {
     for (const [f, k] of Object.entries(FIELD_THEORY)) expect(THEORY[k], f).toBeDefined();
