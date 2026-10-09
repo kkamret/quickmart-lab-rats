@@ -189,7 +189,7 @@ type Readout = {
 ## 5. 검증 시나리오 (Vitest로 그대로 작성)
 | # | 설계 | 기대 결과 |
 |---|---|---|
-| 1 | P1, user, android+store_home, primary abandon, 14일, fixed | SRM 없음, abandon 유의 개선(약 −2.5~−3.0%p), conv 유의 개선, crash 차이 없음 |
+| 1 | P1, user, android+store_home, primary abandon, 14일, fixed | SRM 없음, abandon 유의 개선(약 −2.5~−3.5%p: 정상 상태 −2.5%p에 14일 동안의 신규성 추가분이 더해져 진짜 효과는 약 −3.1%p, 시드에 따른 SD 약 0.35%p), conv 유의 개선, crash 차이 없음 |
 | 2 | 1과 같되 7일 | 효과 추정치가 1보다 큼(신규성), `SHORT_DURATION` |
 | 3 | 1과 같되 unit=session | 관측 효과 약 절반, `UNIT_MISMATCH` |
 | 4 | P1 A/A(효과 0 모드), peek_stop, 14일 | 400개 시드 중 위양성률 15~25% |

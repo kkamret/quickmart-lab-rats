@@ -44,8 +44,9 @@ describe("배민 검증 시나리오", () => {
     expect(r.flags).not.toContain("SRM");
     const ab = cmp(r, "abandon");
     expect(ab.significant).toBe(true);
+    // 정상 상태 -2.5%p 에 14일 평균 신규성 추가분이 더해져 진짜 효과는 약 -3.1%p (시드 300개: 평균 -3.15, SD 0.35)
     expect(ab.d).toBeLessThan(-0.025);
-    expect(ab.d).toBeGreaterThan(-0.03);
+    expect(ab.d).toBeGreaterThan(-0.035);
     expect(cmp(r, "conv").significant).toBe(true);
     expect(cmp(r, "conv").d).toBeGreaterThan(0);
     expect(cmp(r, "crash").significant).toBe(false);
