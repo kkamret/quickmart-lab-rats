@@ -39,6 +39,12 @@ describe("최종 덱(73장)과 챕터·이름 동기화", () => {
     expect("revealOnly" in THEORY.twyman).toBe(true);
     expect(theoryNote("twyman")).toBe("흥미롭거나 이상할 만큼 좋은 숫자는 대개 틀렸으니, 기뻐하기 전에 데이터부터 확인해요.");
   });
+  it("멀티암드 밴딧은 덱·위키 근거가 없어 이론 개념이 아니라 넷플릭스 이론 밖 개념이다", () => {
+    expect("bandit" in THEORY).toBe(false);
+    const m = getClientCase("netflix")!.meta;
+    expect(m.theory as string[]).not.toContain("bandit");
+    expect(m.outsideTheory).toContain("멀티암드 밴딧");
+  });
   it("당근은 트위먼의 법칙을 이론 개념으로 연결하고 이론 밖 목록에서 뺀다", () => {
     const m = getClientCase("daangn")!.meta;
     expect(m.theory).toContain("twyman");
