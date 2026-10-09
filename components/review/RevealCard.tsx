@@ -6,6 +6,8 @@ import { theoryLabel, theoryNote, type TheoryKey } from "@/lib/theory";
 import { Badge, Card, ErrorText } from "../ui";
 
 /** 정답 공개 카드: 강사가 공개를 켠 뒤에만 보인다. 원문 비교 해설과, 이 조의 시뮬레이션이 심어 둔 함정을 알려준다. */
+const VERDICT_BADGE = { correct: { tone: "done", label: "정답" }, partial: { tone: "warn", label: "부분 정답" }, wrong: { tone: "bad", label: "오답" } } as const;
+
 export function RevealCard({ code, teamId, step, theory, outsideTheory = [] }: { code: string; teamId: string; step: StepKey; theory: TheoryKey[]; outsideTheory?: string[] }) {
   const [data, setData] = useState<RevealPayload | null>(null);
   const [err, setErr] = useState("");
@@ -25,7 +27,8 @@ export function RevealCard({ code, teamId, step, theory, outsideTheory = [] }: {
 
   const items = data?.items.filter((i) => i.step === step) ?? [];
   const flags = data?.flags.filter((f) => f.step === step) ?? [];
-  if (!err && items.length === 0 && flags.length === 0) return null;
+  const decisions = data?.decisions.filter((d) => d.step === step) ?? [];
+  if (!err && items.length === 0 && flags.length === 0 && decisions.length === 0) return null;
   return (
     <Card className="border-brand">
       <div className="flex items-center gap-2"><h2 className="text-xl font-bold">정답 공개</h2><Badge tone="run">강사님이 공개했어요</Badge></div>
@@ -36,9 +39,27 @@ export function RevealCard({ code, teamId, step, theory, outsideTheory = [] }: {
           {f.flags.length === 0 ? (
             <p className="mt-1 text-sm text-ink2">이 설계에서는 걸린 함정이 없었어요.</p>
           ) : (
-            <div className="mt-1 flex flex-wrap gap-1.5">{f.flags.map((x) => <Badge key={x.code} tone="warn">{x.label}</Badge>)}</div>
+            <ul className="mt-1 space-y-1.5">
+              {f.flags.map((x) => (
+                <li key={x.code}>
+                  <Badge tone="warn">{x.label}</Badge>
+                  {x.why && <span className="mt-0.5 block text-sm text-ink2">{x.why}</span>}
+                </li>
+              ))}
+            </ul>
           )}
+          {f.notes.map((n) => <p key={n} className="mt-1 text-sm text-ink2">{n}</p>)}
           {f.achievedPower !== null && <p className="mt-1 text-xs text-ink3">달성 검정력 {Math.round(f.achievedPower * 100)}%</p>}
+        </div>
+      ))}
+      {decisions.map((d) => (
+        <div key={d.phase} className="mt-3">
+          <h3 className="text-sm font-semibold">{d.title}: 우리 조의 결정을 이론에 비춰 보면</h3>
+          <p className="mt-1 text-sm">
+            <span className="text-ink2">선택: </span><b>{d.option}</b>{" "}
+            <Badge tone={VERDICT_BADGE[d.verdict].tone}>{VERDICT_BADGE[d.verdict].label}</Badge>
+          </p>
+          <p className="mt-1 text-sm text-ink2">{d.reason}</p>
         </div>
       ))}
       {items.map((i) => (

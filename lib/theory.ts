@@ -50,6 +50,7 @@ export const THEORY = {
   interference_fix: e("간섭 줄이기", 4, { revealOnly: true }),
   ethics: e("윤리", 4),
   ab_n: e("A/B/n", 1, { note: "A/B/n은 대조군 하나에 실험군을 둘 이상 두고 비교하는 형태예요." }),
+  decision: e("배포·접기·재실험 결정", 5, { note: "신뢰구간 전체가 0보다 위이고 크기도 의미 있으면 배포하되, 비용과 리스크를 확인하고 단계적으로 출시해요." }),
   data_informed: e("데이터 기반 의사결정", 5, { note: "데이터 기반 의사결정은 A/B 테스트뿐 아니라 조사, 유지보수 비용 추정 같은 여러 데이터로 판단한다는 뜻이에요." }),
   interleaving: e("인터리빙", 4, { note: "인터리빙은 두 랭킹 알고리즘의 결과를 한 목록에 섞어 어느 쪽이 클릭되는지 봐요." }),
   bandit: e("멀티암드 밴딧", 4, { note: "밴딧은 탐색(아직 모르는 쪽도 시도)과 활용(지금 좋은 쪽에 몰아주기)의 균형을 다뤄요." }),
@@ -89,7 +90,7 @@ export const FIELD_THEORY: Record<string, TheoryKey> = {
   ctr_analysis_unit: "analysis_unit", analysis_population: "trigger", assignment_timing: "trigger",
   alpha: "alpha_power", power: "alpha_power", mde_pp: "mde", mde_pct: "mde",
   duration_days: "duration", duration_weeks: "duration", il_days: "duration", abn_weeks: "duration",
-  stopping: "peeking", ramp: "ramp_up", exclude_first_week: "novelty", include_ramp_days: "ramp_up",
+  stopping: "peeking", ramp: "ramp_up", exclude_first_week: "novelty", analysis_mode: "simpson",
   cuped: "cuped", correction: "multiple_testing",
   run_aa_first: "aa_test", rerun_aa: "aa_test", aa_days: "aa_test",
   trigger_logging: "trigger", il_credit: "goodhart", arms: "ab_n", qualitative_weight: "data_informed", hours_treatment: "tail_metric", salt: "hashing",
@@ -102,7 +103,7 @@ export const STEP_THEORY: Partial<Record<string, TheoryKey[]>> = {
   s2_design: ["hypothesis", "metric_layers", "unit", "error_power", "predefine", "alpha_power", "mde", "allocation"],
   s3_run: ["duration", "randomization", "ramp_up"],
   s4_readout: ["inference"],
-  s6_final: ["predefine", "inference", "ethics"],
+  s6_final: ["predefine", "inference", "decision", "ethics"],
   s7_lab: ["peeking", "simpson", "srm"],
 };
 

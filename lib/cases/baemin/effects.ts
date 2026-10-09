@@ -19,7 +19,7 @@ export const CALIB = {
     nearMin: 0.066,
     aovRel: -0.049,
     crash: 0.0002,
-    /** iOS 구버전 버그 (qa_old_ios=false) */
+    /** iOS 구버전 버그 (P2 에서 램프업 없이 시작했을 때만 본 실험에 들어간다) */
     bug: { crashShare: 0.24, survivorAbandon: -0.04 },
   },
   p3: { trigConv: 0.023, trigAovRel: 0.061 },

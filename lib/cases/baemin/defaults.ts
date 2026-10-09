@@ -11,11 +11,10 @@ const blankP1 = (): Obj => ({
   metrics: { guardrails: [], secondary: [] },
   alpha: 0.05,
   power: 0.8,
-  mde_pp: 1,
   duration_days: 7,
   allocation: 1,
   ramp: "none",
-  include_ramp_days: true,
+  analysis_mode: "pooled",
   count_basis: "assignment",
 });
 
@@ -24,7 +23,7 @@ export function defaultDesign(phase: string, prev?: Obj): Obj {
   if (phase === "diagnose") return { rationale: "" };
   if (sim === "p1") return { ...blankP1(), ...(prev && prev.phase === "p1" ? prev : {}) };
   const base = { ...blankP1(), ...(prev ?? {}) };
-  if (sim === "p2") return { ...base, phase: "p2", scope: { os: "all", surface: "all" }, qa_old_ios: false, count_basis: "exposure" };
+  if (sim === "p2") return { ...base, phase: "p2", scope: { os: "all", surface: "all" }, count_basis: "exposure" };
   if (sim === "p3") {
     return {
       ...base, phase: "p3", trigger_logging: false, coupon_ops: "low",

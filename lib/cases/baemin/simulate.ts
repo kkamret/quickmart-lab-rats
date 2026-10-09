@@ -4,7 +4,7 @@
  */
 import { SimulationRejected } from "../types";
 import {
-  binomialCount, crnZ, designHash, groupMean, meanTest, obfBoundary, powerMean, powerProp, propTest, sigFlags, srm,
+  binomialCount, combineStrata, crnZ, designHash, groupMean, meanTest, obfBoundary, powerMean, powerProp, propTest, sigFlags, srm,
   ssMean, ssProp,
   type Arm, type Comparison, type Flag, type MetricResult, type PeriodRow, type Readout,
 } from "@/lib/sim/core";
@@ -13,7 +13,9 @@ import {
   ABANDON, AOV, AOV_SD, CART_ADD, CRASH, DAILY_INFLOW, GMV_SD, HEAVY_ABANDON, INFLOW_NOISE, NEAR_MIN, PROMO, REPURCHASE7, SEED,
   SEGMENTS, SURFACE_STORE_HOME_MULT, TRIGGER, TYPE_KEYS, VIRTUAL, WEEKDAY_MULT, WEEKEND_ABANDON, WEEKEND_CART, isPromo, isWeekend,
 } from "./population";
+import { theoryLabel } from "@/lib/theory";
 import { designUnion, type Design, type MetricKey, type SimPhase } from "./schema";
+import { mdeOf } from "./mde";
 
 export type SimOptions = {
   seed?: number;
@@ -83,12 +85,20 @@ function armShares(d: Design, arms: Arm[], day: number): Record<string, number> 
 /** 10_50_100: B 에 배정된 사용자 중 실제로 바를 보는 비율(나머지는 대조군처럼 행동) */
 const exposure = (d: Design, day: number) => (d.ramp === "10_50_100" ? (day === 1 ? 0.1 : day === 2 ? 0.5 : 1) : 1);
 
-/** 램프 구간으로 분석에서 뺄 일차들 */
-function excludedDays(d: Design): (day: number) => boolean {
-  if (d.include_ramp_days) return () => false;
-  if (d.ramp === "10_50_100") return (day) => day <= 2;
-  if (d.ramp === "10_week1_50_week2" && d.duration_days > 7) return (day) => day <= 7;
-  return () => false;
+const sameShares = (a: Record<string, number>, b: Record<string, number>) =>
+  Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((k) => k in b && Math.abs(a[k] - b[k]) < 1e-9);
+
+/** 계획 배정비가 같은 연속 일차끼리 묶는다(층). 층화 분석과 SIMPSON_RISK 판단에 쓴다. */
+export function strataOf(shares: Record<string, number>[], days: number[]): number[][] {
+  const out: number[][] = [];
+  let prev: Record<string, number> | null = null;
+  for (const day of days) {
+    const cur = shares[day - 1];
+    if (prev && sameShares(prev, cur)) out[out.length - 1].push(day);
+    else out.push([day]);
+    prev = cur;
+  }
+  return out;
 }
 
 export function validateDesign(input: unknown): { ok: true; design: Design } | { ok: false; message: string } {
@@ -144,7 +154,8 @@ function generate(d: Design, o: Required<Pick<SimOptions, "seed" | "noise" | "mo
   const segs = SEGMENTS.filter((s) => d.scope.os === "all" || s.os === "android");
   const surface = d.scope.surface === "store_home" ? SURFACE_STORE_HOME_MULT : 1;
   const unitK = UNIT_EFFECT_SCALE[d.unit];
-  const bug = d.phase === "p2" && !d.qa_old_ios && !aa;
+  // 램프업(점진 노출)으로 시작했다면 초기 단계의 크래시 가드레일에서 버그가 먼저 드러나 고친 뒤 시작한 것으로 본다.
+  const bug = d.phase === "p2" && d.ramp === "none" && !aa;
   const trigShare = d.phase === "p3" ? TRIGGER.share[d.coupon_ops] : 0;
 
   const count: Counter = o.noise ? binomialCount : (n, p) => n * p;
@@ -202,7 +213,7 @@ function generate(d: Design, o: Required<Pick<SimOptions, "seed" | "noise" | "mo
 
         let cartP = cartBase;
         let abP = abBase + eff.abandon;
-        let crashP = CRASH[seg.os] + eff.crash + (d.unit === "pageview" && arm !== "A" ? 0.001 : 0);
+        let crashP = CRASH[seg.os] + eff.crash;
         if (bug && arm !== "A" && seg.os === "ios_old") {
           if (d.count_basis === "exposure") {
             // 첫 화면 로그 전에 크래시한 사용자가 B 에서 사라진다(SRM). 남은 사용자는 생존자 편향.
@@ -287,9 +298,7 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   const { arms } = data;
   const seScale = UNIT_SE_SCALE[d.unit];
   const alpha = d.alpha;
-  const skip = excludedDays(d);
-  let included = Array.from({ length: d.duration_days }, (_, i) => i + 1).filter((day) => !skip(day));
-  if (included.length === 0) included = Array.from({ length: d.duration_days }, (_, i) => i + 1);
+  const included = Array.from({ length: d.duration_days }, (_, i) => i + 1);
   const K = included.length;
   const primary = d.metrics.primary;
   const treat = arms.filter((a) => a !== "A");
@@ -331,6 +340,18 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     metricList.push({ key, role, stats });
   }
 
+  // 층: 계획 배정비가 같은 연속 일차. stratified 이고 층이 둘 이상일 때만 층별로 비교해 합친다.
+  const strata = strataOf(data.shares, win);
+  const useStrata = d.analysis_mode === "stratified" && strata.length > 1;
+  const stratifiedCompare = (key: MetricKey, arm: Arm) => {
+    const parts = strata.flatMap((days) => {
+      const sa = statOf(key, armAgg("A", "all", days));
+      const sb = statOf(key, armAgg(arm, "all", days));
+      return sa.n === 0 || sb.n === 0 ? [] : [compare(key, sa, sb, alpha, seScale)];
+    });
+    return parts.length ? combineStrata(parts, alpha) : null;
+  };
+
   // 비교(처치군 vs 대조군)와 다중검정 보정
   type Pending = { mi: number; arm: Arm; r: ReturnType<typeof compare> };
   const pending: Pending[] = [];
@@ -339,7 +360,8 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     for (const arm of treat) {
       const sb = m.stats[arm];
       if (!sa || !sb || sa.n === 0 || sb.n === 0) continue;
-      pending.push({ mi, arm, r: compare(m.key, sa, sb, alpha, seScale) });
+      const r = useStrata ? stratifiedCompare(m.key, arm) : compare(m.key, sa, sb, alpha, seScale);
+      if (r) pending.push({ mi, arm, r });
     }
   });
   const correction = d.phase === "p4" ? d.correction : "none";
@@ -351,7 +373,7 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     sig = sigFlags(pending.map((p) => p.r.p), alpha, correction);
   }
   const method = (m: MetricKey) =>
-    `${METRICS[m].type === "prop" ? "비율 z 검정" : "평균 t(z) 검정"}${d.stopping === "sequential" ? " · 순차(OBF)" : ""}${correction !== "none" ? ` · ${correction === "bh" ? "BH" : "Bonferroni"} 보정` : ""}${d.unit !== "user" ? ` · ${d.unit} 단위 SE` : ""}`;
+    `${METRICS[m].type === "prop" ? "비율 z 검정" : "평균 t(z) 검정"}${d.stopping === "sequential" ? " · 순차(OBF)" : ""}${correction !== "none" ? ` · ${correction === "bh" ? "BH" : "Bonferroni"} 보정` : ""}${d.unit !== "user" ? ` · ${d.unit} 단위 SE` : ""}${useStrata ? " · 층화(배정 비율이 같은 기간별) 합산" : ""}`;
 
   const metrics: MetricResult[] = metricList.map((m, mi) => {
     const comparisons: Comparison[] = pending
@@ -447,11 +469,11 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     let mdeAbs: number;
     if (METRICS[primary].type === "prop") {
       const p1 = (fullA.x ?? 0) / fullA.n;
-      mdeAbs = d.mde_pp / 100;
+      mdeAbs = mdeOf(primary) / 100;
       const p2 = p1 - mdeAbs > 0 ? p1 - mdeAbs : p1 + mdeAbs;
       nDenom = ssProp(p1, p2, alpha, d.power);
     } else {
-      mdeAbs = (fullA.mean ?? 0) * (d.mde_pp / 100);
+      mdeAbs = (fullA.mean ?? 0) * (mdeOf(primary) / 100);
       nDenom = ssMean(fullA.sd ?? 1, mdeAbs, alpha, d.power);
     }
     const nUsers = Math.ceil(nDenom / perUser);
@@ -487,21 +509,55 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
     };
   }
   if (truth) panels._truth = truth;
+  if (d.phase === "p2" && d.aa !== true && d.ramp !== "none") {
+    panels._notes = ["램프업 초기 단계의 크래시 가드레일에서 iOS 구버전 버그가 먼저 드러나, 고친 뒤 다시 시작한 것으로 본다. 그래서 이 실험에는 버그가 없다."];
+  }
 
   // ── 비용 ──
   const costs = d.phase === "p3" && d.coupon_ops === "high" ? { coupon_cost_krw: Math.round(armAgg("B", "trig").users * TRIGGER.couponCostKrw) } : undefined;
 
-  // ── 플래그 (조 화면에는 내려보내지 않는다) ──
+  // ── 플래그 (조 화면에는 내려보내지 않는다). 임계값이 있는 플래그는 이유를 _why 에 남긴다(강사·정답 공개 전용). ──
   const flags: Flag[] = [];
-  if (srmRes.p < 0.001) flags.push("SRM");
-  if (d.unit !== "user") flags.push("UNIT_MISMATCH");
-  if (d.unit === "pageview") flags.push("FLICKER");
-  if (win.length < 14) flags.push("SHORT_DURATION");
-  if (achievedPower !== undefined && achievedPower < 0.5) flags.push("UNDERPOWERED");
-  if (d.stopping === "peek_stop") flags.push("PEEKED");
-  if (d.ramp === "10_week1_50_week2" && d.include_ramp_days) flags.push("SIMPSON_RISK");
-  if (correction === "none" && pending.length >= 10) flags.push("MULTIPLE_TESTING");
-  if (d.phase === "p3" && !d.trigger_logging) flags.push("SELECTION_BIAS");
+  const why: Partial<Record<Flag, string>> = {};
+  const raise = (f: Flag, reason?: string) => {
+    flags.push(f);
+    if (reason) why[f] = reason;
+  };
+  const num = (x: number) => Math.round(x).toLocaleString("ko-KR");
+  const label = (...k: Parameters<typeof theoryLabel>[0][]) => `[근거: ${k.map(theoryLabel).join(", ")}]`;
+
+  if (srmRes.p < 0.001) {
+    raise("SRM", `그룹별 사용자 수의 배정 비율 검정 p=${srmRes.p.toExponential(1)}로, 우연으로 보기 어려운 어긋남이에요. 이 앱은 업계 관례인 0.001을 기준으로 해요. ${label("srm")}`);
+  }
+  if (d.unit !== "user") raise("UNIT_MISMATCH");
+
+  const shortReasons: string[] = [];
+  const analysedA = armAgg("A").users;
+  if (planned && analysedA < planned.nPerArm) {
+    shortReasons.push(`분석한 그룹당 사용자가 ${num(analysedA)}명으로, 설계한 α·검정력·MDE로 정한 필요 표본 ${num(planned.nPerArm)}명보다 적어요. ${label("alpha_power", "mde")}`);
+  }
+  if (stopIdx === K - 1 && win.length % 7 !== 0) {
+    shortReasons.push(`분석 구간 ${win.length}일이 요일 주기(7일)의 배수가 아니라 요일별 패턴이 한쪽으로 치우쳐요. ${label("duration")}`);
+  }
+  if (win.length <= 7) {
+    shortReasons.push(`분석 구간이 ${win.length}일로 첫 주에 그쳐서 신기효과가 섞였을 수 있어요. ${label("duration", "novelty")}`);
+  }
+  if (shortReasons.length) raise("SHORT_DURATION", shortReasons.join(" "));
+
+  if (achievedPower !== undefined && achievedPower < d.power) {
+    raise("UNDERPOWERED", `달성 검정력 ${Math.round(achievedPower * 100)}%가 설계에서 정한 ${Math.round(d.power * 100)}%보다 낮아요. ${label("error_power")}`);
+  }
+  if (d.stopping === "peek_stop") raise("PEEKED");
+  if (d.ramp === "10_week1_50_week2" && d.analysis_mode === "pooled" && strata.length > 1) {
+    raise("SIMPSON_RISK", `기간마다 A:B 배정 비율이 달라졌는데(${strata.length}개 구간) 합쳐서 분석했어요. 같은 비율끼리 나눠 비교하면 결론이 달라질 수 있어요. ${label("simpson")}`);
+  }
+  const familyM = pending.filter((p) => metricList[p.mi].role !== "P").length;
+  const familyError = 1 - (1 - alpha) ** familyM;
+  if (correction === "none" && familyError > 0.5) {
+    raise("MULTIPLE_TESTING", `보정 없이 Primary가 아닌 비교 ${familyM}개를 보면, 효과가 전혀 없어도 하나라도 유의하게 나올 확률이 ${Math.round(familyError * 100)}%예요. ${label("multiple_testing")}`);
+  }
+  if (d.phase === "p3" && !d.trigger_logging) raise("SELECTION_BIAS");
+  if (Object.keys(why).length) panels._why = why;
 
   return {
     caseKey: "baemin",

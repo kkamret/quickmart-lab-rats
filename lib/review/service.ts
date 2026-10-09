@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPlugin } from "../cases/registry";
 import { simPhaseOf } from "../lab/phase";
 import type { Readout } from "../sim/core/readout";
-import { latestRunPerPhase, type RunRow as RevealRun } from "../reveal";
+import { judgeDecisions, latestRunPerPhase, type RunRow as RevealRun } from "../reveal";
 import { generateJson } from "./generate";
 import { getLLM } from "./llm";
 import {
@@ -88,10 +88,17 @@ export async function reviewTeam(db: SupabaseClient, args: { classId: string; te
   const submission = latestSubmissions((subs.data ?? []) as SubRow[], args.teamId, phases);
   if (Object.keys(submission).length === 0) throw new ReviewError("먼저 이 스텝에서 무언가를 제출해 주세요.", 409);
 
+  const picks = Object.fromEntries(phases.flatMap((p) => {
+    const option = (submission[`${p}.decision`] as { option?: unknown } | undefined)?.option;
+    return typeof option === "string" ? [[p, option] as const] : [];
+  }));
+  const decision_checks = judgeDecisions(plugin, (runs.data ?? []) as RevealRun[], args.teamId, picks)
+    .map(({ phase, option, verdict, reason }) => ({ phase, option, verdict, reason }));
   const input: TeamReviewInput = {
     case: plugin.key, step: args.step,
     rubric: phases.map((p) => plugin.rubric[p]).filter(Boolean).join("\n"),
     submission, sim: latestSim((runs.data ?? []) as RunRow[], args.teamId, phases), revealed,
+    ...(decision_checks.length ? { decision_checks } : {}),
     // 정답 공개 뒤에는 원문 비교 해설을 함께 보낸다(캐시 키에도 들어가므로 공개 전후 결과가 섞이지 않는다)
     ...(revealed ? { original: phases.map((p) => plugin.reveal[p]).filter(Boolean).join("\n") } : {}),
   };

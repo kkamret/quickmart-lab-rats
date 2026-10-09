@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { SimulationRejected } from "../../types";
-import { toTeamView, type Readout } from "@/lib/sim/core";
+import { ALL_FLAGS, toTeamView, type Readout } from "@/lib/sim/core";
 import { baeminPlugin, simulateBaemin, validateDesign } from "../index";
 import { SEED } from "../population";
 
@@ -14,12 +14,12 @@ type D = Record<string, unknown>;
 const p1 = (over: D = {}): D => ({
   phase: "p1", hypothesis: hyp, scope: { os: "android", surface: "store_home" }, unit: "user",
   metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov"] },
-  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", include_ramp_days: true,
+  alpha: 0.05, power: 0.8, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled",
   stopping: "fixed", count_basis: "assignment", ...over,
 });
 const p2 = (over: D = {}): D =>
   p1({
-    phase: "p2", qa_old_ios: true, scope: { os: "all", surface: "all" },
+    phase: "p2", scope: { os: "all", surface: "all" },
     metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov", "gmv", "near_min_share"] }, ...over,
   });
 const p3 = (over: D = {}): D =>
@@ -96,8 +96,8 @@ describe("배민 검증 시나리오", () => {
     expect(rate).toBeLessThanOrEqual(0.07);
   }, 60000);
 
-  it("#6 P2 전체, 노출 기준, qa_old_ios=false: SRM, B 사용자 약 7천 명 부족", () => {
-    const r = simulateBaemin(p2({ qa_old_ios: false, count_basis: "exposure" }));
+  it("#6 P2 전체, 노출 기준, 램프업 없음: SRM, B 사용자 약 7천 명 부족", () => {
+    const r = simulateBaemin(p2({ count_basis: "exposure" }));
     expect(r.srm!.p).toBeLessThan(0.001);
     expect(r.flags).toContain("SRM");
     const [a, b] = r.srm!.counts;
@@ -109,8 +109,8 @@ describe("배민 검증 시나리오", () => {
     expect(Math.abs(byOs.android.A.users - byOs.android.B.users)).toBeLessThan(1500);
   });
 
-  it("#7 P2 전체, 배정 기준, qa_old_ios=true: SRM 없음, 이탈·전환 개선, aov 악화, gmv 차이 없음, first_order 이탈 악화", () => {
-    const r = simulateBaemin(p2());
+  it("#7 P2 전체, 램프업으로 시작(버그 없음): SRM 없음, 이탈·전환 개선, aov 악화, gmv 차이 없음, first_order 이탈 악화", () => {
+    const r = simulateBaemin(p2({ ramp: "10_50_100" }));
     expect(r.srm!.p).toBeGreaterThan(0.001);
     expect(cmp(r, "abandon").d).toBeLessThan(0);
     expect(cmp(r, "abandon").significant).toBe(true);
@@ -166,7 +166,7 @@ describe("배민 검증 시나리오", () => {
 
   it("#12 simpson_demo: 합산하면 B 우세, 주차별로 보면 B 열세", () => {
     const r = simulateBaemin(
-      p1({ ramp: "10_week1_50_week2", include_ramp_days: true, metrics: { primary: "conv", guardrails: ["abandon"], secondary: [] } }),
+      p1({ ramp: "10_week1_50_week2", analysis_mode: "pooled", metrics: { primary: "conv", guardrails: ["abandon"], secondary: [] } }),
       { mode: "simpson_demo" },
     );
     expect(cmp(r, "conv").d).toBeGreaterThan(0);
@@ -183,8 +183,8 @@ describe("배민 검증 시나리오", () => {
     const a = JSON.stringify(simulateBaemin(p1()));
     const b = JSON.stringify(simulateBaemin(p1()));
     expect(a).toBe(b);
-    expect(JSON.stringify(simulateBaemin(p2({ qa_old_ios: false, count_basis: "exposure" })))).toBe(
-      JSON.stringify(simulateBaemin(p2({ qa_old_ios: false, count_basis: "exposure" }))),
+    expect(JSON.stringify(simulateBaemin(p2({ count_basis: "exposure" })))).toBe(
+      JSON.stringify(simulateBaemin(p2({ count_basis: "exposure" }))),
     );
   });
 
@@ -237,12 +237,12 @@ describe("설계 검증과 규칙", () => {
     expect(fp / 2000).toBeGreaterThan(0.03);
   }, 60000);
 
-  it("램프업 구간 제외 옵션은 1~2일을 분석에서 뺀다", () => {
-    const incl = simulateBaemin(p1({ ramp: "10_50_100", include_ramp_days: true }));
-    const excl = simulateBaemin(p1({ ramp: "10_50_100", include_ramp_days: false }));
-    expect(excl.srm!.counts[0]).toBeLessThan(incl.srm!.counts[0]);
-    // 1일차는 B 효과가 10% 만 보이므로 포함하면 효과가 희석돼 보인다
-    expect(Math.abs(cmp(excl, "abandon").d)).toBeGreaterThan(Math.abs(cmp(incl, "abandon").d) * 0.9);
+  it("램프업 일차를 분석에서 빼는 옵션은 없다: 분석 방식과 상관없이 모든 일차를 쓴다", () => {
+    const pooled = simulateBaemin(p1({ ramp: "10_50_100", analysis_mode: "pooled" }));
+    const strat = simulateBaemin(p1({ ramp: "10_50_100", analysis_mode: "stratified" }));
+    expect(pooled.srm!.counts).toEqual(strat.srm!.counts);
+    expect(pooled.periods).toHaveLength(14);
+    expect(pooled.stoppedAt).toBe(14);
   });
 
   it("P3 coupon_ops=high 에서만 쿠폰 비용이 보이고, 트리거가 늘어 검정력이 오른다", () => {
@@ -263,8 +263,8 @@ describe("설계 검증과 규칙", () => {
     const r = simulateBaemin(p1());
     expect(r.planned!.nPerArm).toBeGreaterThan(1000);
     expect(r.planned!.days).toBeGreaterThan(0);
-    // MDE 를 키우면 필요한 표본이 줄어든다
-    expect(simulateBaemin(p1({ mde_pp: 4 })).planned!.nPerArm).toBeLessThan(r.planned!.nPerArm);
+    // 검정력을 낮추면 필요한 표본이 줄어든다 (MDE 는 Primary 지표별로 고정)
+    expect(simulateBaemin(p1({ power: 0.7 })).planned!.nPerArm).toBeLessThan(r.planned!.nPerArm);
   });
 });
 
@@ -317,5 +317,188 @@ describe("플러그인 인터페이스", () => {
     const r = baeminPlugin.simulate("p1_run", p1() as never, { prior: {} });
     expect(r.phase).toBe("p1");
     expect(() => baeminPlugin.simulate("diagnose", p1() as never, { prior: {} })).toThrow(SimulationRejected);
+  });
+});
+
+describe("페이지뷰 단위", () => {
+  it("깜빡임(FLICKER) 장치는 없다: 페이지뷰는 UNIT_MISMATCH 만 붙는다", () => {
+    expect(ALL_FLAGS as readonly string[]).not.toContain("FLICKER");
+    const r = simulateBaemin(p1({ unit: "pageview" }));
+    expect(r.flags).toContain("UNIT_MISMATCH");
+    expect(r.flags as string[]).not.toContain("FLICKER");
+  });
+
+  it("페이지뷰 단위가 크래시율을 따로 올리지 않는다(이론 근거 없음)", () => {
+    const user = simulateBaemin(p1({ unit: "user" }), { withTruth: false });
+    const pv = simulateBaemin(p1({ unit: "pageview" }), { withTruth: false });
+    const crashRate = (r: Readout) => {
+      const m = metric(r, "crash");
+      return (m.arms.B!.x ?? 0) / m.arms.B!.n;
+    };
+    // 단위가 효과를 줄이는 것(×0.3)과 별개로, 이전 구현의 +0.1%p 가산은 없어야 한다(차이 < 0.05%p)
+    expect(crashRate(pv)).toBeCloseTo(crashRate(user), 3);
+  });
+});
+
+describe("분석 방식(analysis_mode)", () => {
+  const simpsonDesign = (mode: "pooled" | "stratified") =>
+    p1({ ramp: "10_week1_50_week2", analysis_mode: mode, metrics: { primary: "conv", guardrails: ["abandon"], secondary: [] } });
+
+  it("배정 비율이 바뀌는 램프: 합쳐서 분석하면 B 우세, 같은 비율끼리 나눠 합치면 주차별 방향(B 열세)과 같다", () => {
+    const pooled = simulateBaemin(simpsonDesign("pooled"), { mode: "simpson_demo" });
+    const strat = simulateBaemin(simpsonDesign("stratified"), { mode: "simpson_demo" });
+    expect(cmp(pooled, "conv").d).toBeGreaterThan(0);
+    expect(cmp(strat, "conv").d).toBeLessThan(0);
+    expect(cmp(strat, "conv").method).toContain("층화");
+    expect(cmp(pooled, "conv").method).not.toContain("층화");
+  });
+
+  it("SIMPSON_RISK 는 배정 비율이 달라진 기간을 합쳐서 분석했을 때만 붙는다", () => {
+    const pooled = simulateBaemin(simpsonDesign("pooled"), { mode: "simpson_demo" });
+    const strat = simulateBaemin(simpsonDesign("stratified"), { mode: "simpson_demo" });
+    expect(pooled.flags).toContain("SIMPSON_RISK");
+    expect(strat.flags).not.toContain("SIMPSON_RISK");
+    // 7일이면 한 주(층 하나)뿐이라 합산 왜곡이 없다
+    const week1 = simulateBaemin(p1({ ramp: "10_week1_50_week2", duration_days: 7, analysis_mode: "pooled" }), { mode: "simpson_demo" });
+    expect(week1.flags).not.toContain("SIMPSON_RISK");
+  });
+
+  it("배정 비율이 일정한 램프(none, 10_50_100)에서는 두 방식의 결과가 같다", () => {
+    for (const ramp of ["none", "10_50_100"]) {
+      const a = simulateBaemin(p1({ ramp, analysis_mode: "pooled" }), { withTruth: false });
+      const b = simulateBaemin(p1({ ramp, analysis_mode: "stratified" }), { withTruth: false });
+      expect(JSON.stringify(b.metrics)).toBe(JSON.stringify(a.metrics));
+      expect(b.flags).toEqual(a.flags);
+    }
+  });
+
+  it("analysis_mode 를 생략하면 pooled 로 읽는다(이전 제출 호환)", () => {
+    const d = p1();
+    delete (d as Record<string, unknown>).analysis_mode;
+    const v = validateDesign(d);
+    expect(v.ok).toBe(true);
+    if (v.ok) expect(v.design.analysis_mode).toBe("pooled");
+  });
+});
+
+describe("P2 iOS 구버전 버그와 램프업", () => {
+  it("램프업 없음(ramp none)이면 노출 기준에서 SRM, 배정 기준에서는 SRM 없이 크래시가 오른다", () => {
+    const exposure = simulateBaemin(p2({ count_basis: "exposure" }));
+    expect(exposure.flags).toContain("SRM");
+    const assignment = simulateBaemin(p2({ count_basis: "assignment" }));
+    expect(assignment.flags).not.toContain("SRM");
+    expect(cmp(assignment, "crash").d).toBeGreaterThan(0.01);
+    expect(cmp(assignment, "crash").significant).toBe(true);
+  });
+
+  it("램프업으로 시작하면 집계 기준이 exposure 여도 버그가 없다", () => {
+    for (const ramp of ["10_50_100", "10_week1_50_week2"]) {
+      const r = simulateBaemin(p2({ ramp, count_basis: "exposure" }));
+      expect(r.flags, ramp).not.toContain("SRM");
+      expect(cmp(r, "crash").significant, ramp).toBe(false);
+    }
+  });
+
+  it("램프업을 쓴 P2 는 강사 전용 안내(_notes)가 붙고, 조 화면에는 보이지 않는다", () => {
+    const r = simulateBaemin(p2({ ramp: "10_50_100" }));
+    const notes = r.panels._notes as string[];
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain("램프업");
+    expect(toTeamView(r).panels._notes).toBeUndefined();
+    expect(simulateBaemin(p2()).panels._notes).toBeUndefined();
+    expect(simulateBaemin(p1({ ramp: "10_50_100" })).panels._notes).toBeUndefined();
+  });
+
+  it("p2 스키마에는 qa_old_ios 가 없다", () => {
+    expect(baeminPlugin.formMeta.p2.map((f) => f.name)).not.toContain("qa_old_ios");
+    const v = validateDesign(p2());
+    expect(v.ok).toBe(true);
+    if (v.ok) expect("qa_old_ios" in v.design).toBe(false);
+  });
+});
+
+describe("플래그 규칙(이론 근거)", () => {
+  const why = (r: Readout) => (r.panels._why ?? {}) as Record<string, string>;
+
+  it("SHORT_DURATION: 완전한 주(7의 배수)가 아니면 붙는다", () => {
+    const r10 = simulateBaemin(p1({ duration_days: 10 }));
+    expect(r10.flags).toContain("SHORT_DURATION");
+    expect(why(r10).SHORT_DURATION).toContain("요일 주기");
+    for (const days of [14, 21, 28]) expect(simulateBaemin(p1({ duration_days: days })).flags, `${days}일`).not.toContain("SHORT_DURATION");
+  });
+
+  it("SHORT_DURATION: 첫 주만 본 7일 설계에는 신기효과 문구가 붙는다", () => {
+    const r7 = simulateBaemin(p1({ duration_days: 7 }));
+    expect(r7.flags).toContain("SHORT_DURATION");
+    expect(why(r7).SHORT_DURATION).toContain("첫 주");
+  });
+
+  it("SHORT_DURATION: 분석한 사용자 수가 필요 표본에 못 미치면 붙는다", () => {
+    const r = simulateBaemin(p1({ duration_days: 14, allocation: 0.1 }));
+    expect(r.flags).toContain("SHORT_DURATION");
+    expect(why(r).SHORT_DURATION).toContain("필요 표본");
+    // 14일은 완전한 주이고 표본이 충분한 기본 설계에는 붙지 않는다
+    expect(simulateBaemin(p1()).flags).not.toContain("SHORT_DURATION");
+  });
+
+  it("SHORT_DURATION: 중간 확인으로 일찍 멈춘 설계는 요일 주기 규칙 대상이 아니다", () => {
+    const peek = simulateBaemin(p1({ stopping: "peek_stop", duration_days: 28 }));
+    expect(peek.stoppedAt!).toBeLessThan(28);
+    if (peek.stoppedAt! > 7) {
+      // 8일 이후에 멈췄다면 요일 주기 문구는 없어야 한다
+      expect(why(peek).SHORT_DURATION ?? "").not.toContain("요일 주기");
+    }
+  });
+
+  it("UNDERPOWERED: 달성 검정력이 설계에서 정한 검정력보다 낮을 때 붙는다", () => {
+    const a = simulateBaemin(p3({ coupon_ops: "high" })).achievedPower!;
+    for (const power of [0.7, 0.8, 0.9]) {
+      const r = simulateBaemin(p3({ coupon_ops: "high", power }));
+      expect(r.achievedPower, `power ${power}`).toBeCloseTo(a, 10);
+      expect(r.flags.includes("UNDERPOWERED"), `power ${power}`).toBe(a < power);
+    }
+    expect(why(simulateBaemin(p3())).UNDERPOWERED).toContain("검정력");
+  });
+
+  it("MULTIPLE_TESTING: 보정 없이 Primary 가 아닌 비교가 14개 이상(가족 오류율 > 0.5, α=0.05)일 때 붙는다", () => {
+    const secondary14 = ["aov", "gmv", "repurchase7", "cs_rate", "near_min_share"]; // 가드레일 2 + 보조 5 = 7개 지표 × 처치군 2 = 14
+    const r14 = simulateBaemin(p4({ metrics: { primary: "conv", guardrails: ["abandon", "crash"], secondary: secondary14 } }));
+    expect(r14.flags).toContain("MULTIPLE_TESTING");
+    expect(why(r14).MULTIPLE_TESTING).toContain("다중검정");
+    // 가드레일 2 + 보조 4 = 6개 지표 × 처치군 2 = 12개: 1-0.95^12 ≈ 0.46
+    const r12 = simulateBaemin(p4({ metrics: { primary: "conv", guardrails: ["abandon", "crash"], secondary: secondary14.slice(0, 4) } }));
+    expect(r12.flags).not.toContain("MULTIPLE_TESTING");
+    // 보정하면 14개여도 붙지 않는다
+    const bh = simulateBaemin(p4({ correction: "bh", metrics: { primary: "conv", guardrails: ["abandon", "crash"], secondary: secondary14 } }));
+    expect(bh.flags).not.toContain("MULTIPLE_TESTING");
+    // P1 기본 설계(비교 3개)에는 붙지 않는다
+    expect(simulateBaemin(p1()).flags).not.toContain("MULTIPLE_TESTING");
+  });
+
+  it("SRM 과 SIMPSON_RISK 에도 근거 문장이 붙고, 조 화면에는 _why 가 보이지 않는다", () => {
+    const srm = simulateBaemin(p2({ count_basis: "exposure" }));
+    expect(why(srm).SRM).toContain("0.001");
+    const simpson = simulateBaemin(p1({ ramp: "10_week1_50_week2", metrics: { primary: "conv", guardrails: ["abandon"], secondary: [] } }), { mode: "simpson_demo" });
+    expect(why(simpson).SIMPSON_RISK).toContain("심슨");
+    expect(toTeamView(srm).panels._why).toBeUndefined();
+  });
+});
+
+describe("루브릭·정답 해설 문구", () => {
+  const all = [...Object.values(baeminPlugin.rubric), ...Object.values(baeminPlugin.reveal)].join("\n");
+
+  it("이론에 없는 개념과 절대 기준을 쓰지 않는다", () => {
+    expect(all).not.toContain("홀드아웃");
+    expect(all).not.toContain("14일 이상");
+    expect(all).not.toContain("안드로이드 + 가게홈");
+    expect(all).not.toContain("사전 QA");
+  });
+
+  it("Phase 별 루브릭은 결정의 정오를 decision_checks 에 맡긴다", () => {
+    for (const phase of ["p1", "p2", "p3", "p4"]) expect(baeminPlugin.rubric[phase], phase).toContain("decision_checks");
+  });
+
+  it("P2 정답 해설은 iOS 구버전 에피소드를 램프업과 연결해 설명한다", () => {
+    expect(baeminPlugin.reveal.p2).toContain("램프업");
   });
 });

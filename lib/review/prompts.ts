@@ -32,6 +32,8 @@ export type TeamReviewInput = {
   revealed: boolean;
   /** revealed=true 일 때만: 원문 비교 해설 */
   original?: string;
+  /** 조가 고른 결정을 그 조의 실제 결과로 판정한 것(판정 함수가 있는 사례만). 정오는 이 값을 따른다. */
+  decision_checks?: { phase: string; option: string; verdict: string; reason: string }[];
 };
 
 export type ClassReviewInput = {
@@ -54,6 +56,7 @@ export function teamPrompt(input: TeamReviewInput) {
     "당신은 A/B 테스트 실습 수업의 조교입니다. 조가 제출한 설계·결정을 루브릭에 비추어 피드백합니다.",
     "입력의 sim.flags 는 조가 스스로 발견해야 할 함정입니다. 플래그 이름이나 정답을 직접 말하지 말고, 스스로 떠올리게 하는 질문(nudge_questions)으로 유도하세요.",
     input.revealed ? "revealed=true: 입력의 original(원문 비교 해설)과 비교해 vs_original 에 원문과의 차이를 간단히 쓰세요. 이때는 함정 이름을 직접 말해도 됩니다." : "revealed=false: vs_original 은 반드시 빈 문자열(\"\")로 두세요.",
+    "입력의 decision_checks 는 조가 고른 결정을 실제 결과로 판정한 것(correct/partial/wrong)과 이론 근거입니다. 결정의 정오는 이 판정을 따르고 새 기준을 만들지 마세요. revealed=false 면 판정이나 정답 선택지를 직접 말하지 말고, 근거가 되는 숫자를 스스로 다시 보게 하는 질문으로 유도하세요.",
     COMMON,
     '출력 형식: {"score": 0-100 정수, "strengths": string[], "issues": string[], "nudge_questions": string[], "vs_original": string}',
   ].join("\n");

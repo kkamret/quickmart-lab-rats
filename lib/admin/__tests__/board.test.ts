@@ -10,7 +10,7 @@ const hyp = { action: "안내해요", behavior: "바로 주문해요", impact: "
 const p1 = (over: Record<string, unknown> = {}) => ({
   phase: "p1", hypothesis: hyp, scope: { os: "android", surface: "store_home" }, unit: "user",
   metrics: { primary: "abandon", guardrails: ["conv", "crash"], secondary: ["aov"] },
-  alpha: 0.05, power: 0.8, mde_pp: 2, duration_days: 14, allocation: 1, ramp: "none", include_ramp_days: true,
+  alpha: 0.05, power: 0.8, duration_days: 14, allocation: 1, ramp: "none", analysis_mode: "pooled",
   stopping: "fixed", count_basis: "assignment", ...over,
 });
 
@@ -40,7 +40,7 @@ describe("buildBoard", () => {
   it("같은 사례·Phase 의 조들을 한 비교표로 묶고, A/A 기록은 뺀다", () => {
     const runs = [
       run("t1", p1(), "2026-01-01T00:00:00Z"),
-      run("t2", p1({ duration_days: 7, mde_pp: 1 }), "2026-01-01T00:00:00Z"),
+      run("t2", p1({ duration_days: 7 }), "2026-01-01T00:00:00Z"),
       run("t2", p1({ aa: true }), "2026-01-01T00:05:00Z", { ...p1(), aa: true }),
     ];
     const b = buildBoard(teams, [], runs);

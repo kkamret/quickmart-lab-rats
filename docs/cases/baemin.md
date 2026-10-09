@@ -73,7 +73,7 @@
 - 이탈률: general −0.024 / first_order +0.018 / member −0.036
 - 최소+2천 원 이내 비중: 0.18 → 0.246 (전 세그먼트 +0.066) → 평균주문금액 약 −4.9%
 - 결과적으로 인당 거래액은 거의 변화 없음(+0.9% 내외)
-- **iOS 구버전 버그**: `qa_old_ios = false`이면 ios_old의 B그룹 사용자 24%가 첫 화면 로그 전에 크래시
+- **iOS 구버전 버그**: `ramp = 'none'`(램프업 없이 시작)이면 ios_old의 B그룹 사용자 24%가 첫 화면 로그 전에 크래시. 램프업(`10_50_100`, `10_week1_50_week2`)으로 시작하면 초기 단계의 크래시 가드레일에서 먼저 드러나 고친 뒤 시작한 것으로 보고 본 실험에는 버그가 없다(근거: 덱 「A/A로 점검하고, 조금씩 늘리고, 충분히 돌린다」, 위키 09편 1.2.1)
   - `count_basis = 'exposure'`(노출 로그 기준): 이 사용자들이 B에서 **누락** → SRM 발생, 남은 B는 생존자 편향(이탈률이 0.04 더 낮게 관측)
   - `count_basis = 'assignment'`(배정 기준): 누락 없음, 대신 해당 사용자들은 이탈 처리 → B 크래시율 급증(가드레일 악화로 드러남)
 
@@ -101,15 +101,13 @@ type Design = {
   metrics: { primary: MetricKey; guardrails: MetricKey[]; secondary: MetricKey[] }
   alpha: 0.01|0.05|0.1
   power: 0.7|0.8|0.9
-  mde_pp: number            // 메인 지표 기준 절대 %p (금액 지표면 상대 %)
   duration_days: number     // 7~28
   allocation: number        // 범위 트래픽 중 실험 투입 비율 0.05~1
   ramp: 'none'|'10_50_100'|'10_week1_50_week2'
-  include_ramp_days: boolean
+  analysis_mode: 'pooled'|'stratified'  // 기본 pooled
   stopping: 'fixed'|'peek_stop'|'sequential'
   count_basis: 'assignment'|'exposure'
   // phase 전용
-  qa_old_ios?: boolean       // p2
   trigger_logging?: boolean  // p3
   coupon_ops?: 'low'|'high'  // p3 (마케팅 협업 요청 여부)
   arms?: ('A'|'B'|'C')[]     // p4
@@ -118,18 +116,37 @@ type Design = {
 type MetricKey = 'abandon'|'conv'|'aov'|'gmv'|'near_min_share'|'bar_click'|'crash'|'load_time'|'repurchase7'|'cs_rate'|'min_reach'
 ```
 
+### 3-1b. Primary 지표별 협의 MDE(교육용 가상 값)
+
+데이터 분석가는 MDE를 정하기 어렵고, 덱 「MDE는 통계가 아니라 비즈니스가 정한다」에서도 MDE는 실험 전에 비즈니스가 준다. 그래서 설계 입력에서 `mde_pp`를 없애고 Primary 지표별 고정 값(`lib/cases/baemin/mde.ts`의 `BUSINESS_MDE_PP`)을 쓴다. 블로그 사례에는 MDE가 없어서 모두 교육용 가상 값이다. 조에게는 Primary 지표 선택 도움말에 표시한다.
+
+| 지표 | MDE | 단위 |
+|---|---|---|
+| 장바구니 이탈률 | 1.5 | %p |
+| 커머스 주문전환율 | 1.0 | %p |
+| 평균주문금액 | 3 | 상대 % |
+| 인당 거래액 | 3 | 상대 % |
+| 최소주문금액 근처 주문 비중 | 2 | %p |
+| 바 클릭률 | 2 | %p |
+| 앱 크래시율 | 0.1 | %p |
+| 로딩 시간 | 5 | 상대 % |
+| 7일 재구매율 | 1 | %p |
+| 고객 문의율 | 1 | %p |
+| 최소주문금액 도달률 | 2 | %p |
+
 ### 3-2. 반영 규칙
 | 설계 | 규칙 |
 |---|---|
 | scope | 일 유입 = 52,000 × 범위 배수 × allocation. os='android'면 ios 세그먼트 제외 |
 | unit = session | 사용자당 평균 2.3세션. 같은 사용자가 두 그룹을 오가며 **관측 효과 × 0.55**. 분석은 세션 단위 SE로 계산해 p-value가 과소(실제 SE의 1/1.5) → 경고 플래그 `UNIT_MISMATCH` |
-| unit = pageview | 관측 효과 × 0.30, SE 과소(1/2.0), 크래시율 +0.001(깜빡임 렌더링) → `UNIT_MISMATCH`, `FLICKER` |
+| unit = pageview | 관측 효과 × 0.30, SE 과소(1/2.0) → `UNIT_MISMATCH` |
 | primary = bar_click | 대조군에 정의 불가 → 시뮬 거부, 에러 메시지 "대조군에는 바가 없어 비교할 수 없어요" |
 | primary 지표 | 해당 지표로 SRM → 메인 → 가드레일 → 보조 순 Readout 생성. 지표별 분산이 달라 같은 효과도 유의 여부가 갈림 (gmv는 per-user SD 9,190원) |
-| alpha / power / mde | 계획 표본·기간 계산(프로토타입 calc 로직). 실제 달성 검정력도 Readout에 표시 |
-| duration_days | 실행 기간. 7일 미만 입력 불가. 짧을수록 P1 신규성 효과가 섞여 효과 과대추정 → `SHORT_DURATION` |
-| ramp = 10_50_100 | 1일차 10%, 2일차 50%, 3일차~ 100% 노출. include_ramp_days=false면 1~2일 제외 분석 |
-| ramp = 10_week1_50_week2 | 1~7일 B 10%, 8~14일 B 50% (8~14일 프로모션 주간과 겹침). include_ramp_days=true로 합쳐 분석하면 **심슨의 역설** 발생 → `SIMPSON_RISK` |
+| alpha / power / mde | 계획 표본·기간 계산(프로토타입 calc 로직). MDE는 조가 고르지 않고 Primary 지표별로 비즈니스가 협의한 고정 값을 쓴다(아래 '협의 MDE' 표). 실제 달성 검정력도 Readout에 표시 |
+| duration_days | 실행 기간. 7일 미만 입력 불가. 짧을수록 P1 신규성 효과가 섞여 효과 과대추정. `SHORT_DURATION` 조건은 §3-3 |
+| ramp = 10_50_100 | 1일차 10%, 2일차 50%, 3일차~ 100% 노출(그룹 크기는 50:50 유지). 모든 일차를 분석에 쓴다 |
+| ramp = 10_week1_50_week2 | 1~7일 B 10%, 8~14일 B 50% (8~14일 프로모션 주간과 겹침). `analysis_mode = pooled`로 합쳐 분석하면 **심슨의 역설** 발생 → `SIMPSON_RISK`. `stratified`는 배정 비율이 같은 기간끼리 비교한 뒤 역분산 가중으로 합쳐 왜곡이 없다(근거: 덱 「분산 축소」의 층화 분석, 「세그먼트마다 이기는데 전체로는 진다」, 위키 04편 3.5.1) |
+| analysis_mode | `pooled`: 전 기간 합산. `stratified`: 계획 배정비가 같은 연속 일차(층)별로 효과를 구해 합침. 층이 하나뿐이면 두 방식은 같다 |
 | stopping = peek_stop | 매일 누적 검정, 처음 p<α인 날 종료하고 그날 결과로 Readout. 끝까지 안 뜨면 duration까지 → `PEEKED` |
 | stopping = sequential | O'Brien-Fleming형 경계 `z_k = z_{α/2} · sqrt(K/k)`로 매일 확인, 넘으면 조기 종료 (α 유지) |
 | count_basis | P2 버그 규칙 참고 |
@@ -138,7 +155,16 @@ type MetricKey = 'abandon'|'conv'|'aov'|'gmv'|'near_min_share'|'bar_click'|'cras
 | correction (p4) | 메인+가드레일+보조 전 검정에 적용해 판정 |
 
 ### 3-3. 경고 플래그 (Readout.flags)
-`SRM`, `UNIT_MISMATCH`, `FLICKER`, `SHORT_DURATION`, `UNDERPOWERED`(달성 검정력 < 0.5), `PEEKED`, `SIMPSON_RISK`, `MULTIPLE_TESTING`(보정 없이 검정 10개 이상), `SELECTION_BIAS`(편향 트리거 비교 사용)
+`SRM`(p < 0.001: 덱이 임계값 없이 "우연으로 보기 어렵다"고만 하므로 업계 관례를 쓴다), `UNIT_MISMATCH`, `SHORT_DURATION`, `UNDERPOWERED`, `PEEKED`, `SIMPSON_RISK`, `MULTIPLE_TESTING`, `SELECTION_BIAS`(편향 트리거 비교 사용)
+
+| 플래그 | 조건 | 이론 근거 |
+|---|---|---|
+| `SHORT_DURATION` | (1) 분석한 대조군 사용자 < 계획 표본 `planned.nPerArm`, 또는 (2) 중간 확인으로 일찍 멈추지 않았는데 분석 일수가 7의 배수가 아님, 또는 (3) 분석 일수 ≤ 7 | 덱 「α와 Power」, 「최소 1~2주, 요일과 신기효과를 넘겨서」, 「초반 반응은 오래 가지 않을 수 있다」 / 위키 05편 4.1~4.2, 09편 1.2.2~1.2.3 |
+| `UNDERPOWERED` | 달성 검정력 < 조가 설계에서 정한 검정력(`power`) | 덱 「실험이 틀리는 두 가지 방식」, 「MDE는 통계가 아니라 비즈니스가 정한다」 |
+| `SIMPSON_RISK` | `ramp = 10_week1_50_week2`, `analysis_mode = pooled`, 층 2개 이상 | 덱 「세그먼트마다 이기는데 전체로는 진다」 |
+| `MULTIPLE_TESTING` | 보정 없음 + Primary가 아닌 비교 m개의 `1−(1−α)^m` > 0.5 (α=0.05면 m ≥ 14) | 덱 「지표 20개를 보면 하나쯤은 우연히 걸린다」 / 위키 09편 1.4.2~1.4.4 |
+
+- 이유 문장은 `Readout.panels._why`에 남기고(강사·정답 공개 전용), P2 램프업 안내는 `panels._notes`에 남긴다. 둘 다 `toTeamView`가 제거한다.
 - 플래그는 조 화면에 즉시 보여주지 않는다. Readout에는 데이터(SRM 수치 등)만 보이고, 플래그는 강사 화면과 AI 리뷰 입력에만 쓴다. (수강생이 스스로 발견하게)
 
 ---
@@ -168,13 +194,13 @@ type Readout = {
 | 3 | 1과 같되 unit=session | 관측 효과 약 절반, `UNIT_MISMATCH` |
 | 4 | P1 A/A(효과 0 모드), peek_stop, 14일 | 400개 시드 중 위양성률 15~25% |
 | 5 | 4와 같되 fixed | 위양성률 3~7% |
-| 6 | P2, all, exposure, qa_old_ios=false | SRM p < 0.001, B 사용자 약 7천 명 부족 |
-| 7 | P2, all, assignment, qa_old_ios=true | SRM 없음, abandon·conv 개선, aov 유의 악화, gmv 차이 없음, first_order 세그먼트 이탈률 악화 |
+| 6 | P2, all, exposure, ramp none | SRM p < 0.001, B 사용자 약 7천 명 부족 |
+| 7 | P2, all, 램프업 10_50_100(버그 없음) | SRM 없음, abandon·conv 개선, aov 유의 악화, gmv 차이 없음, first_order 세그먼트 이탈률 악화 |
 | 8 | P3, coupon_ops=low, primary conv | conv 차이 없음, achievedPower 0.15~0.35, `UNDERPOWERED` |
 | 9 | P3, trigger_logging=true | counterfactual 트리거 비교에서 conv·aov 유의 개선 |
 | 10 | P3, trigger_logging=false | 편향 비교만 제공, 차이 과대(30%p 이상), `SELECTION_BIAS` |
-| 11 | P4, correction=none, 보조 지표 6개 이상 | C의 aov 유의 악화, 메인 차이 없음, `MULTIPLE_TESTING` |
-| 12 | `simpson_demo` 모드(주문전환율 진짜 효과 −0.4%p), 10_week1_50_week2 + include_ramp_days=true | 합산하면 B가 우세, 주차별로 보면 B 열세 |
+| 11 | P4, correction=none, 보조 지표 6개 이상 | C의 aov 유의 악화, 메인 차이 없음, `MULTIPLE_TESTING` (Primary 아닌 비교 16개 → 가족 오류율 56%) |
+| 12 | `simpson_demo` 모드(주문전환율 진짜 효과 −0.4%p), 10_week1_50_week2 + analysis_mode=pooled | 합산하면 B가 우세, 주차별로 보면 B 열세 |
 | 13 | 같은 설계 두 번 | 결과 완전히 동일 (결정성) |
 | 14 | 설계 A와 B가 duration만 다름 | 겹치는 날짜의 일별 대조군 집계 동일 (공통 난수) |
 
@@ -194,17 +220,27 @@ type Readout = {
 | 가드레일 | 커머스 주문전환율 + 크래시/로딩 | 시스템 가드레일 누락 감점 |
 | 보조 | 평균주문금액 등 | P2 복선 |
 | 단위 | 사용자 | 세션/페이지뷰 오류 |
-| 범위 | 안드로이드 + 가게홈 | 전체도 허용하되 리스크·공수 근거 필요 |
-| 기간 | 14일 이상 | 7일은 신규성 위험 |
+| 범위 | 작게 시작(안드로이드·가게홈 등) 또는 출시 대상을 닮은 전체 | 고른 쪽의 이유가 일관되면 인정(덱 「A/A로 점검하고, 조금씩 늘리고…」, 「실험 대상은 출시 대상을 닮아야 한다」) |
+| 기간 | 완전한 주 단위, 필요 표본 충족, 첫 주만 보지 않기 | 숫자 하나가 아니라 이유가 이 기준에 맞는지 |
 | 중간 확인 | fixed 또는 sequential | peek_stop 오류 |
 
 ### 결정
-| Phase | 옵션 | 판정 |
-|---|---|---|
-| P1 | 배포 / 배포 안 함 / 기간 연장 재실험 | 배포(확대 실험 필요 언급 시 만점) / 오답 / 부분(홀드아웃이 더 나음) |
-| P2 | 전면 배포 / 배포 안 함 / 배포 + 보조 지표 발견으로 후속 실험 | 부분 / 오답 / 정답 |
-| P3 | 롤백 / 배포 / 노출 조건 확대 후 재실험(마케팅 협업) | 오답 / 부분 / 정답 |
-| P4 | B 배포 / C 배포 / 둘 다 배포 안 함 + 학습 정리 | 오답(재구매율은 다중검정 위양성) / 오답(가드레일 악화) / 정답 |
+정답은 옵션마다 고정하지 않고 **조의 실제 결과**로 판정한다(`lib/cases/baemin/judge.ts`). 근거는 덱 「'유의하다'에서 멈추지 말고 결정으로 닫는다」와 「효과 크기 × 비용 × 리스크를 함께 본다」.
+
+| 우선순위 | 상태(조의 최신 본 실험) | 배포 | 접기/배포 안 함 | 재실험 |
+|---|---|---|---|---|
+| 1 | SRM 또는 시스템 가드레일(크래시·로딩) 유의 악화 → 중단 | 오답 | 재실험 선택지가 없는 P2·P4는 정답, 있는 P1·P3는 부분 | 정답 |
+| 2 | Primary 구간 전체가 개선 방향 0 바깥 + 효과 ≥ MDE, 위험 없음 | 정답 | 오답 | 부분 |
+| 2 | 위와 같지만 비즈니스 가드레일(전환율·평균주문금액·인당 거래액) 유의 악화 또는 고객 유형 하나에서 Primary 반대로 유의 악화(P2) | 전면 배포 부분 / 후속 실험을 붙인 배포 정답 | 오답 | 부분 |
+| 2 | 위와 같지만 분석 구간이 7일 이하(첫 주만) | 부분 | 오답 | 정답 |
+| 3 | 유의하지만 효과 < MDE | 부분(비용 확인 필요) | 부분 | 오답 |
+| 4 | 구간이 0 포함 + ±MDE 안 | 오답 | 정답 | 부분 |
+| 5 | 구간이 0 포함 + MDE보다 넓음 | 오답 | 오답(성급) | 정답 |
+| 6 | Primary 유의 악화 | 오답 | 정답 | 부분 |
+
+- P3는 트리거 사용자만 효과를 받으므로 전체 차이와 구간을 `B 트리거 사용자 / B 전체 사용자`로 나눠 환산한 뒤 분류한다(덱 「효과를 받을 수 있는 사람만 분석에 넣는다」).
+- P4는 B·C 그룹을 따로 분류한다. "둘 다 배포 안 함"은 두 그룹 중 가장 나쁜 판정 기준이다.
+- 교육 시나리오의 기대 정답: P1 14일 → 배포 / P1 7일 → 기간 연장 재실험 / P2 SRM → 배포 안 함 / P2 램프업(평균주문금액 악화) → 후속 실험을 붙인 배포. 협의 MDE(이탈률 1.5%p)보다 실제 효과(−1.99%p)가 커서 Primary는 개선이고, 평균주문금액 악화 때문에 후속 실험을 붙인다 / P3 coupon low → 노출 조건 확대 후 재실험 / P4 기본 → 둘 다 배포 안 함.
 
 ### 정답 공개 해설(reveal) 요지
 - P1→P2: 작게 시작해 가능성 확인 후 확대. P2 보조 지표의 두 발견(평균주문금액 천장, 구매 의사 높은 고객에게 혜택 안내가 효과적)이 P3 가설이 됨.
