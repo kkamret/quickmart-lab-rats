@@ -5,6 +5,7 @@ import { getPlugin } from "@/lib/cases/registry";
 import { simPhaseOf } from "@/lib/lab/phase";
 import { runSimulation } from "@/lib/lab/sim-service";
 import { simulateBody } from "@/lib/schemas";
+import { saveSimRun } from "@/lib/sim/store";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 // 시뮬레이션: 제출한 최신 설계로 plugin.simulate → sim_runs 에 저장 → flags·숨김 필드를 뺀 Readout 만 반환(규칙 3)
@@ -37,15 +38,12 @@ export async function POST(req: Request) {
   const out = runSimulation(plugin, phase, sub.payload as Record<string, unknown>, mode);
   if (!out.ok) return fail(out.message);
 
-  // 같은 설계(design_hash)는 한 번만 저장 — 강사 화면의 결과 비교(M4)가 이 테이블을 읽는다
-  const { data: cached } = await db
-    .from("sim_runs").select("id").eq("team_id", teamId).eq("phase", simPhase).eq("design_hash", out.readout.designHash).limit(1).maybeSingle();
-  if (!cached) {
-    await db.from("sim_runs").insert({
-      class_id: cls.id, team_id: teamId, case_key: plugin.key, phase: simPhase,
-      design: mode === "aa" ? { ...(sub.payload as object), aa: true } : sub.payload,
-      design_hash: out.readout.designHash, result: out.readout,
-    });
-  }
+  // 같은 설계(design_hash)는 한 행만 두되, 다시 돌리면 그 행의 결과와 시각을 갱신한다 — 강사 화면의 결과 비교(M4)·정답 공개·AI 리뷰가
+  // "가장 최근 실행"으로 이 테이블을 읽으므로, 옛 행을 그대로 두면 엔진을 고친 뒤에도 옛 결과를 가리킨다.
+  await saveSimRun(db, {
+    class_id: cls.id, team_id: teamId, case_key: plugin.key, phase: simPhase,
+    design: mode === "aa" ? { ...(sub.payload as object), aa: true } : sub.payload,
+    design_hash: out.readout.designHash, result: out.readout,
+  });
   return NextResponse.json({ readout: out.team });
 }

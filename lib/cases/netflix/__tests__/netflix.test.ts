@@ -5,7 +5,10 @@
 import { describe, expect, it } from "vitest";
 import { toTeamView, type Readout } from "@/lib/sim/core";
 import { SimulationRejected } from "../../types";
+import { ssMean, ssProp } from "@/lib/sim/core";
 import { diagnoseFlags, netflixPlugin, simulateNetflix, validateDesign } from "../index";
+import { hoursStat, whaleShare } from "../common";
+import { HOURS_MIX, RETENTION } from "../population";
 
 type D = Record<string, unknown>;
 const ALL = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"];
@@ -62,9 +65,11 @@ describe("넷플릭스 검증 시나리오", () => {
     expect(r.flags).toContain("POSITION_BIAS");
   });
 
-  it("#4 correction none: 무효 후보 중 최소 1개 p < 0.05 (CRN 고정으로 재현), MULTIPLE_TESTING", () => {
+  it("#4 correction none: 무효에 가까운 후보(R1, 진짜 선호 0.505)가 p < 0.05 (CRN 고정으로 재현), BH 면 유의 아님, MULTIPLE_TESTING", () => {
     const r = simulateNetflix(il({ correction: "none" }));
-    expect(NULLS.some((id) => pOf(r, id) < 0.05)).toBe(true);
+    expect(pOf(r, "R1")).toBeLessThan(0.05);
+    expect(sigPref(r, "R1")).toBe(true);
+    expect(sigPref(simulateNetflix(il()), "R1")).toBe(false);
     expect(r.flags).toContain("MULTIPLE_TESTING");
     const again = simulateNetflix(il({ correction: "none" }));
     expect(NULLS.map((id) => pOf(again, id))).toEqual(NULLS.map((id) => pOf(r, id)));
@@ -77,6 +82,10 @@ describe("넷플릭스 검증 시나리오", () => {
     expect(r.flags).toContain("UNDERPOWERED");
     const note = r.panels.power_note as { neededTotalMembers: number; perGroup: number; neededPerGroup: number };
     expect(note.neededPerGroup).toBeGreaterThan(note.perGroup);
+    // Bonferroni 가 아니면(BH) 계획 유의수준이 0.05 라 검정력이 0.50 경계에 걸린다
+    const bh = simulateNetflix(abn({ correction: "bh" }));
+    expect(bh.achievedPower!).toBeGreaterThan(0.45);
+    expect(bh.achievedPower!).toBeLessThan(0.55);
     // 리텐션은 기간 내 판단 불가 수준
     const ret = simulateNetflix(abn({ abn_primary: "retention", abn_weeks: 4 }));
     expect(ret.achievedPower!).toBeLessThan(0.2);
@@ -89,14 +98,16 @@ describe("넷플릭스 검증 시나리오", () => {
     expect(r.flags).toContain("NOVELTY");
   });
 
-  it("#7 결선 R2+R3, 10%, 6주, winsorize + cuped, 첫 주 제외: R3 +0.9~1.3% 유의, R2 유의 아님", () => {
+  it("#7 결선 R2+R3, 10%, 6주, winsorize + cuped, 첫 주 제외: R3 +0.9~1.3% 유의, R2 는 정상 상태 ≈+0.4% 로 줄어 R3 보다 확연히 작다", () => {
     const r = simulateNetflix(fin());
     const r2 = cmp(r, "hours", "B");
     const r3 = cmp(r, "hours", "C");
     expect(r3.rel * 100).toBeGreaterThanOrEqual(0.9);
     expect(r3.rel * 100).toBeLessThanOrEqual(1.3);
     expect(r3.significant).toBe(true);
-    expect(r2.significant).toBe(false);
+    // R2 의 유의 여부는 노이즈 draw 에 따라 갈린다(시드 12개 중 9개에서 p < 0.05). 효과 크기 비교만 확인한다.
+    expect(r2.rel * 100).toBeLessThan(0.7);
+    expect(r2.rel).toBeLessThan(0.7 * r3.rel);
     // 2분 내 이탈은 R2 에서 늘어난다
     expect(cmp(r, "early_exit", "B").d).toBeGreaterThan(0);
     expect(r.flags).not.toContain("NOVELTY");
@@ -161,9 +172,59 @@ describe("넷플릭스 검증 시나리오", () => {
 describe("넷플릭스 추가 검증", () => {
   it("peek_stop 은 신규성 구간에서 조기 종료하고 PEEKED + NOVELTY", () => {
     const r = simulateNetflix(fin({ stopping: "peek_stop", exclude_first_week: false, hours_treatment: "raw", cuped: false, weeks: 6 }));
-    expect(r.stoppedAt!).toBeLessThan(4);
+    expect(r.stoppedAt).toBe(1);
     expect(r.flags).toContain("PEEKED");
     expect(r.flags).toContain("NOVELTY");
+    // 첫 주를 빼면 2주차(분석 첫 주)에 멈추고 PEEKED 만
+    const ex = simulateNetflix(fin({ stopping: "peek_stop" }));
+    expect(ex.stoppedAt).toBe(2);
+    expect(ex.flags).toContain("PEEKED");
+    expect(ex.flags).not.toContain("NOVELTY");
+  });
+  it("sequential 도 표본이 크면 신규성 구간인 1주차에 멈추고 NOVELTY (PEEKED 는 아님)", () => {
+    const r = simulateNetflix(fin({ stopping: "sequential", exclude_first_week: false }));
+    expect(r.stoppedAt).toBe(1);
+    expect(r.flags).toContain("NOVELTY");
+    expect(r.flags).not.toContain("PEEKED");
+  });
+  it("§2-1 인터리빙 표본: 한 표본 z 검정(선호 vs 0.5) 기준으로 선호 0.52·검정력 80% 에 쌍당 약 5천 명", () => {
+    const r = simulateNetflix(il());
+    const note = r.panels.sample_note as { neededPerPair: number; perPair: number };
+    expect(note.neededPerPair).toBeGreaterThanOrEqual(4800);
+    expect(note.neededPerPair).toBeLessThanOrEqual(5100);
+    expect(r.planned!.nPerArm).toBe(note.neededPerPair);
+    // 쌍당 1만 명이면 선호 0.52 를 잡을 검정력은 약 0.98
+    expect(r.achievedPower!).toBeGreaterThan(0.95);
+    expect(r.achievedPower!).toBeLessThan(0.99);
+    // Bonferroni(8개) 는 유의수준이 엄격해져서 더 많이 필요하다
+    const bonf = simulateNetflix(il({ correction: "bonferroni" }));
+    expect((bonf.panels.sample_note as { neededPerPair: number }).neededPerPair).toBeGreaterThan(note.neededPerPair);
+    // 쌍당 2천 명이면 검정력이 절반 아래 → UNDERPOWERED
+    expect(simulateNetflix(il({ il_members_per_pair: 2000 })).flags).toContain("UNDERPOWERED");
+  });
+  it("§1·§2-1 모집단과 A/B 표본: 중앙값·고래 비율, 시청 시간 +1% 에 필요한 그룹당 표본(1주·4주 창)", () => {
+    // 로그정규 성분 중앙값 ≈ 4.6, 0 질량 포함 전체 중앙값 ≈ 3.9, 고래(주 60시간 이상) ≈ 0.37%
+    expect(Math.exp(HOURS_MIX.mu)).toBeCloseTo(4.6, 1);
+    const zMed = -0.1719; // Φ⁻¹((0.5 − 0.12) / 0.88)
+    expect(Math.exp(HOURS_MIX.mu + HOURS_MIX.sigma * zMed)).toBeCloseTo(3.9, 1);
+    expect(whaleShare()).toBeGreaterThan(0.0035);
+    expect(whaleShare()).toBeLessThan(0.0039);
+    const ss = (tr: "raw" | "winsorize_p99", w: number, cuped: boolean) => {
+      const st = hoursStat(tr, 0.01, w, cuped);
+      return ssMean(st.sd, st.mT - st.mA, 0.05, 0.8) / 1e4;
+    };
+    const near = (x: number, v: number) => expect(Math.abs(x - v), `${x} ≈ ${v}`).toBeLessThan(1);
+    near(ss("raw", 1, false), 30); near(ss("winsorize_p99", 1, false), 25); near(ss("winsorize_p99", 1, true), 14);
+    near(ss("raw", 4, false), 26); near(ss("winsorize_p99", 4, false), 22); near(ss("winsorize_p99", 4, true), 12);
+    near(ssProp(RETENTION, RETENTION + 0.0015, 0.05, 0.8) / 1e4, 45);
+  });
+  it("NOVELTY 는 시청 시간 메인에만: 대리 지표·리텐션 메인은 짧게 봐도 뜨지 않는다", () => {
+    const surr = simulateNetflix(fin({ primary: "surrogate_2ep", weeks: 2, exclude_first_week: false }));
+    expect(surr.flags).not.toContain("NOVELTY");
+    const surrPeek = simulateNetflix(fin({ primary: "surrogate_2ep", weeks: 2, exclude_first_week: false, stopping: "peek_stop" }));
+    expect(surrPeek.flags).not.toContain("NOVELTY");
+    expect(surrPeek.flags).toContain("PEEKED");
+    expect(simulateNetflix(fin({ weeks: 2, exclude_first_week: false })).flags).toContain("NOVELTY");
   });
   it("대리 지표에서 R3 는 유의", () => {
     const r = simulateNetflix(fin({ primary: "surrogate_2ep", weeks: 4 }));

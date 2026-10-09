@@ -509,7 +509,8 @@ export function simulateToss(input: unknown, opts: SimOptions = {}): Readout {
 
   // ── 플래그 (조 화면에는 내려보내지 않는다) ──
   const flags: Flag[] = [];
-  const maxS = Math.max(0, ...treat.map((vn) => trueEffect(cfg.variants[vn as "V1" | "V2"]).s));
+  // A/A 는 진짜 효과가 없어서 습관 침식도 없다 → 짧게 끝내도 SHORT_DURATION 이 아니다
+  const maxS = cfg.aa ? 0 : Math.max(0, ...treat.map((vn) => trueEffect(cfg.variants[vn as "V1" | "V2"]).s));
   if (srmRes.p < 0.001) flags.push("SRM");
   if (cfg.primary === "push_ctr" && !clicksMeasured) flags.push("RATIO_COMPOSITION");
   if (cfg.unit === "push") flags.push("NAIVE_SE");

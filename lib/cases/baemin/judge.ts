@@ -10,7 +10,7 @@ import { designUnion, type Design, type MetricKey } from "./schema";
 import { mdeOf } from "./mde";
 
 type Action = "deploy" | "followup" | "stop" | "rerun";
-type State = "halt" | "deploy_clean" | "deploy_risk" | "deploy_novelty" | "small_sig" | "null_narrow" | "null_wide" | "bad";
+type State = "halt" | "simpson" | "deploy_clean" | "deploy_risk" | "deploy_novelty" | "small_sig" | "small_novelty" | "null_narrow" | "null_wide" | "bad";
 
 /** Phase 별 결정 옵션이 가리키는 행동. P4 의 deploy_b / deploy_c 는 각각 B / C 그룹의 deploy 다. */
 const ACTIONS: Record<string, Record<string, Action>> = {
@@ -22,6 +22,8 @@ const ACTIONS: Record<string, Record<string, Action>> = {
 /** 결정 선택지에 "다시 실험"이 있는 Phase. 없으면 중단·재실험이 필요한 상황에서 "배포 안 함"이 가장 가까운 선택이다. */
 const HAS_RERUN: Record<string, boolean> = { p1: true, p2: false, p3: true, p4: false };
 const OPTION_ARM: Record<string, "B" | "C"> = { deploy_b: "B", deploy_c: "C" };
+/** 재실험 선택지가 없는 Phase 에서 "첫 주만 본 개선"에 가장 가까운 행동 */
+const NOVELTY_PICK: Record<string, Action> = { p2: "followup", p4: "deploy" };
 
 const LOWER_IS_BETTER = new Set<MetricKey>(["abandon", "crash", "load_time", "cs_rate"]);
 const SYSTEM = new Set<MetricKey>(["crash", "load_time"]);
@@ -36,6 +38,13 @@ const TABLE: Record<State, Record<Action, Row>> = {
     followup: r("wrong", "그래서 이 결과로 배포하면 안 돼요."),
     stop: r("partial", "배포하지 않는 건 맞지만, 원인을 고쳐 다시 실험하는 편이 더 좋아요."),
     rerun: r("correct", "원인을 고쳐 다시 실험하는 게 맞아요."),
+  },
+  // 배정 비율이 바뀐 기간을 합쳐서 분석했다: 합친 추정이 진짜 효과와 달라질 수 있어 중단과 같게 본다(층화해서 다시 분석하거나 다시 실험).
+  simpson: {
+    deploy: r("wrong", "그래서 합친 추정으로 배포하면 안 돼요."),
+    followup: r("wrong", "그래서 합친 추정으로 배포하면 안 돼요."),
+    stop: r("partial", "배포하지 않는 건 맞지만, 같은 비율끼리 나눠 다시 분석하거나 다시 실험하는 편이 더 좋아요."),
+    rerun: r("correct", "같은 비율끼리 나눠(층화) 다시 분석하거나, 배정 비율을 바꾸지 않고 다시 실험하는 게 맞아요."),
   },
   deploy_clean: {
     deploy: r("correct", "그래서 배포가 맞아요. 비용과 리스크를 확인하면서 단계적으로 출시하세요."),
@@ -61,6 +70,13 @@ const TABLE: Record<State, Record<Action, Row>> = {
     stop: r("partial", "비용이 효과보다 크다면 접는 것도 방법이에요."),
     rerun: r("wrong", "구간이 이미 좁아서 재실험으로 알게 될 것이 적어요."),
   },
+  // 효과가 MDE보다 작은데 첫 주만 봤다: 신기효과가 섞였을 수 있어 기간을 늘려 다시 확인하는 쪽이 가장 가깝다.
+  small_novelty: {
+    deploy: r("partial", "분석 기간이 짧아 효과가 부풀었을 수 있고 MDE보다도 작아서, 바로 배포하기엔 근거가 부족해요."),
+    followup: r("partial", "분석 기간이 짧아 효과가 부풀었을 수 있고 MDE보다도 작아서, 먼저 기간을 늘려 확인하는 편이 좋아요."),
+    stop: r("partial", "비용이 효과보다 크다면 접는 것도 방법이에요."),
+    rerun: r("correct", "기간을 늘려 효과가 안정되는지, 그래도 MDE보다 작은지 확인하는 게 맞아요."),
+  },
   null_narrow: {
     deploy: r("wrong", "효과가 있어도 MDE보다 작은 변화에 배포 비용을 쓰는 셈이에요."),
     followup: r("wrong", "효과가 있어도 MDE보다 작은 변화에 배포 비용을 쓰는 셈이에요."),
@@ -85,7 +101,13 @@ const TABLE: Record<State, Record<Action, Row>> = {
 function rowFor(phase: string, state: State, action: Action): Row {
   if (action === "stop" && !HAS_RERUN[phase]) {
     if (state === "halt") return r("correct", "그래서 이 결과로 배포하지 말고, 원인을 고친 뒤 다시 실험해야 해요.");
+    if (state === "simpson") return r("correct", "그래서 합친 추정으로 배포하지 말고, 같은 비율끼리 나눠 다시 분석하거나 다시 실험해야 해요.");
     if (state === "null_wide") return r("partial", "재실험이 필요한 상황이지만 이 단계에는 재실험 선택지가 없어서 '배포 안 함'이 가장 가까워요.");
+  }
+  // 첫 주만 본 개선 결과는 기간을 늘린 재실험이 정답이지만, 재실험 선택지가 없는 단계(P2·P4)에서는
+  // 배포하면서 기간을 늘려 계속 확인하는 선택이 가장 가까운 정답이다. P2 는 후속 실험을 붙인 배포, P4 는 그 그룹의 배포다.
+  if (state === "deploy_novelty" && !HAS_RERUN[phase] && action === NOVELTY_PICK[phase]) {
+    return r("correct", "재실험 선택지가 없는 단계라서, 배포하되 분석 기간이 짧아 효과가 부풀었을 수 있다는 점을 안고 기간을 늘려 계속 확인하는 선택이 가장 가까워요.");
   }
   return TABLE[state][action];
 }
@@ -97,7 +119,7 @@ const signed = (x: number, digits: number) => `${x >= 0 ? "+" : ""}${(x * 100).t
 type Kind = "good_big" | "good_small" | "bad" | "null_narrow" | "null_wide";
 
 /** 한 그룹(arm)의 Primary 비교를 덱의 기준으로 분류한다. share 가 있으면 트리거 사용자 기준으로 환산한다(P3). */
-function classify(m: MetricResult, c: Comparison, mde: number, share: number | null): { kind: Kind; text: string } {
+function classify(m: MetricResult, c: Comparison, mde: number, share: number | null, alpha: number): { kind: Kind; text: string } {
   const key = m.key as MetricKey;
   const isProp = m.type === "prop";
   const scale = share && share > 0 ? 1 / share : 1;
@@ -112,15 +134,19 @@ function classify(m: MetricResult, c: Comparison, mde: number, share: number | n
   const unit = isProp ? "%p" : "%";
   const digits = isProp ? 2 : 1;
   const scope = scale !== 1 ? "트리거 사용자 기준으로 환산한 " : "";
-  const base = `Primary(${m.label})의 ${scope}차이는 ${signed(effect, digits)}${unit}, 95% 구간은 [${signed(lo, digits)}${unit}, ${signed(hi, digits)}${unit}]이고 MDE는 ${(mde * 100).toFixed(1)}${unit}예요.`;
+  const base = `Primary(${m.label})의 ${scope}차이는 ${signed(effect, digits)}${unit}, ${Math.round((1 - alpha) * 100)}% 구간은 [${signed(lo, digits)}${unit}, ${signed(hi, digits)}${unit}]이고 MDE는 ${(mde * 100).toFixed(1)}${unit}예요.`;
   if (c.significant) {
     if (gEff < 0) return { kind: "bad", text: `${base} 유의하게 나빠졌어요.` };
     return gEff >= mde
       ? { kind: "good_big", text: `${base} 구간 전체가 0 바깥이고 효과가 MDE 이상이에요.` }
       : { kind: "good_small", text: `${base} 유의하지만 효과가 MDE보다 작아요.` };
   }
-  if (gLo > -mde && gHi < mde) return { kind: "null_narrow", text: `${base} 구간이 0을 포함하고 ±MDE 안에 들어 있어서, 효과가 있어도 MDE보다 작아요.` };
-  return { kind: "null_wide", text: `${base} 구간이 0을 포함하고 MDE보다 넓어서, 효과가 있는지 없는지 아직 알 수 없어요.` };
+  // 구간이 0 바깥인데도 유의하지 않다면 순차 검정 경계나 다중검정 보정 때문이다. 이때는 "0을 포함한다"고 쓰면 사실과 다르다.
+  const excludesZero = lo0 > 0 || hi0 < 0;
+  const adj = [c.method.includes("순차") ? "순차 검정" : "", c.method.includes("보정") ? "다중검정" : ""].filter(Boolean).join("·");
+  const zero = excludesZero ? `구간은 0을 포함하지 않지만 ${adj ? `${adj} ` : ""}보정 후에는 유의하지 않아요. 구간이` : "구간이 0을 포함하고";
+  if (gLo > -mde && gHi < mde) return { kind: "null_narrow", text: `${base} ${zero} ±MDE 안에 들어 있어서, 효과가 있어도 MDE보다 작아요.` };
+  return { kind: "null_wide", text: `${base} ${zero} MDE보다 넓어서, 효과가 있는지 없는지 아직 알 수 없어요.` };
 }
 
 /** Primary 가 아닌 지표 중 유의하게 나빠진 시스템·비즈니스 지표 이름 */
@@ -156,6 +182,17 @@ function segmentHarm(readout: Readout, primary: MetricKey): string | null {
 
 type ArmState = { arm: string; state: State; text: string };
 
+/**
+ * 분석 구간이 첫 주(7일 이하)에 그친 이유. 중간 확인 규칙(peek_stop·sequential)으로 계획 기간보다 일찍 멈췄다면 그 규칙과 날짜를 함께 말한다.
+ * 표본이 큰 설계에서는 순차 검정도 첫 주 안에 경계를 넘기 쉬워서, 규칙을 잘 골랐어도 멈춘 날을 확인해야 한다.
+ */
+function firstWeekWhy(design: Design, stoppedAt: number): string {
+  const early = design.stopping !== "fixed" && stoppedAt < design.duration_days;
+  return !early
+    ? `분석 구간이 ${stoppedAt}일로 첫 주에 그쳐서`
+    : `${design.stopping === "sequential" ? "순차 검정 경계를 넘어" : "매일 확인하다 유의해져"} ${stoppedAt}일째에 일찍 멈췄어요. 그래서 분석 구간이 첫 주에 그쳐`;
+}
+
 function stateOf(phase: string, readout: Readout, design: Design, arm: string): ArmState {
   const primary = design.metrics.primary;
   const m = readout.metrics.find((x) => x.key === primary);
@@ -170,15 +207,22 @@ function stateOf(phase: string, readout: Readout, design: Design, arm: string): 
     return { arm, state: "halt", text: `${why}. 결과를 해석하기 전에 원인부터 찾아 고쳐야 해요. ${srm ? cite("srm", "decision") : cite("metric_layers", "decision")}` };
   }
   if (!m || !c) return { arm, state: "null_wide", text: "Primary 지표를 비교할 데이터가 없어서 효과를 알 수 없어요." };
+  if (readout.flags.includes("SIMPSON_RISK")) {
+    return {
+      arm, state: "simpson",
+      text: `기간마다 A:B 배정 비율이 달라졌는데 합쳐서 분석해서, 합친 차이가 진짜 효과와 달라질 수 있어요(심슨의 역설). 같은 비율끼리 나눠(층화) 비교해야 해요. ${cite("simpson", "decision")}`,
+    };
+  }
 
   let share: number | null = null;
-  if (phase === "p3") {
+  // 트리거 환산은 사용자 단위 비율인 주문전환율에만 맞는 계산이다(다른 지표는 분모가 달라 같은 배수로 환산할 수 없다).
+  if (phase === "p3" && primary === "conv") {
     const trig = readout.panels.trigger as { biased?: { exposed?: { n?: number } } } | undefined;
     const exposed = trig?.biased?.exposed?.n ?? 0;
     const bUsers = readout.srm?.counts?.[1] ?? 0;
     share = exposed > 0 && bUsers > 0 ? exposed / bUsers : null;
   }
-  const p = classify(m, c, mde, share);
+  const p = classify(m, c, mde, share, design.alpha);
   const dilution = share ? ` 문구를 보는 사용자가 B의 ${pct(share)}뿐이라 전체 지표는 효과가 희석돼요. ${cite("trigger")}` : "";
   const risks: string[] = [];
   if (h.business.length) risks.push(`${h.business.join("·")}이(가) 유의하게 나빠졌어요.`);
@@ -188,14 +232,14 @@ function stateOf(phase: string, readout: Readout, design: Design, arm: string): 
 
   switch (p.kind) {
     case "bad":
-      return { arm, state: "bad", text: `${p.text}${riskText} ${cite("decision")}` };
+      // Primary 자체가 나빠졌으면 "다만 ~도 반대로 나빠졌다" 같은 위험 문구는 덧붙이지 않는다(이미 나쁜 쪽이 결론이다).
+      return { arm, state: "bad", text: `${p.text} ${cite("decision")}` };
     case "good_big":
       if (risks.length) return { arm, state: "deploy_risk", text: `${p.text}${riskText} ${cite("decision")}` };
-      if (stoppedAt <= 7) {
-        return { arm, state: "deploy_novelty", text: `${p.text} 하지만 분석 구간이 ${stoppedAt}일로 첫 주에 그쳐서 신기효과가 섞였을 수 있어요. ${cite("duration", "novelty")}` };
-      }
+      if (stoppedAt <= 7) return { arm, state: "deploy_novelty", text: `${p.text} 하지만 ${firstWeekWhy(design, stoppedAt)} 신기효과가 섞였을 수 있어요. ${cite("duration", "novelty")}` };
       return { arm, state: "deploy_clean", text: `${p.text} 가드레일에도 이상이 없어요. ${cite("decision")}` };
     case "good_small":
+      if (stoppedAt <= 7) return { arm, state: "small_novelty", text: `${p.text}${riskText} 게다가 ${firstWeekWhy(design, stoppedAt)} 신기효과가 섞여 효과가 부풀었을 수 있어요. ${cite("decision", "mde", "duration", "novelty")}` };
       return { arm, state: "small_sig", text: `${p.text}${riskText} ${cite("decision", "mde")}` };
     case "null_narrow":
       return { arm, state: "null_narrow", text: `${p.text}${dilution}${riskText} ${cite("decision")}` };

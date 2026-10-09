@@ -11,8 +11,8 @@ import { fmtInt, type ArmLabels } from "./format";
  * 사례 전용 패널·시계열·그룹 이름은 props 로 받는다(공통 컴포넌트에 사례 로직이 새지 않게).
  */
 export function ReadoutView({
-  readout, title, series = [], periodUnit = "일", armLabels = {}, children,
-}: { readout: TeamReadout; title?: string; series?: Series[]; periodUnit?: string; armLabels?: ArmLabels; children?: ReactNode }) {
+  readout, title, series = [], periodUnit = "일", armLabels = {}, alpha, metricLabels, children,
+}: { readout: TeamReadout; title?: string; series?: Series[]; periodUnit?: string; armLabels?: ArmLabels; alpha?: number; metricLabels?: Record<string, string>; children?: ReactNode }) {
   const arms = Object.keys(readout.periods[0]?.arms ?? { A: 1, B: 1 });
   const armName = (a: string) => armLabels[a]?.split(" ")[0] ?? a;
   return (
@@ -23,7 +23,7 @@ export function ReadoutView({
         {readout.planned && <> 계획 표본은 그룹당 약 <b>{fmtInt(readout.planned.nPerArm)}</b>명, 기간은 약 <b>{readout.planned.days}</b>일이에요.</>}
       </p>
       {readout.srm && <SrmStrip srm={readout.srm} arms={arms.map(armName)} />}
-      <Card className="!p-4"><MetricTable metrics={readout.metrics} armLabels={armLabels} /></Card>
+      <Card className="!p-4"><MetricTable metrics={readout.metrics} armLabels={armLabels} alpha={alpha} metricLabels={metricLabels} /></Card>
       {series.length > 0 && (
         <Card className="!p-4">
           <h4 className="mb-2 text-sm font-semibold">{periodUnit}별 추이</h4>

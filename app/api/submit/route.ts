@@ -34,6 +34,10 @@ export async function POST(req: Request) {
     if (!parsed.success) return fail(parsed.error.issues[0].message);
   } else if (kind === "decision") {
     const dec = plugin.decisions[phase];
+    // 설계를 한 번도 제출하지 않았다면 결정을 받지 않는다(UI 에서 막아도 API 로 직접 보낼 수 있다)
+    const { data: design } = await db
+      .from("submissions").select("version").eq("team_id", teamId).eq("phase", dec?.requires ?? phase).eq("kind", "design").limit(1).maybeSingle();
+    if (!design) return fail("먼저 설계를 제출해 주세요. 설계 없이는 결정을 제출할 수 없어요.", 409);
     const parsed = decisionSchema((dec?.options ?? []).map((o) => o.id), dec?.fields).safeParse(payload);
     if (!parsed.success) return fail(parsed.error.issues[0].message);
   } else {

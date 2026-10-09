@@ -73,6 +73,18 @@ describe("judgeBaemin: 분류", () => {
     expect(judge(base({ duration_days: 7 }), r, "extend_rerun").reason).toContain("신기효과");
   });
 
+  it("중간 확인 규칙으로 첫 주 안에 일찍 멈췄으면 판정은 같고, 근거에 멈춘 이유와 날짜가 들어간다", () => {
+    const r = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.039, [-0.05, -0.028], true)])], { stoppedAt: 3 });
+    const seq = base({ stopping: "sequential" });
+    expect(verdicts(seq, r, P1_OPTS)).toEqual({ deploy: "partial", no_deploy: "wrong", extend_rerun: "correct" });
+    expect(judge(seq, r, "deploy").reason).toContain("순차 검정 경계를 넘어 3일째에 일찍 멈췄어요");
+    const peek = base({ stopping: "peek_stop" });
+    expect(judge(peek, r, "deploy").reason).toContain("매일 확인하다 유의해져 3일째에 일찍 멈췄어요");
+    // 계획한 기간(7일)을 다 채운 fixed 설계에는 조기 종료 문구가 없다
+    const r7 = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.03, [-0.04, -0.02], true)])], { stoppedAt: 7 });
+    expect(judge(base({ duration_days: 7 }), r7, "deploy").reason).not.toContain("일찍 멈췄어요");
+  });
+
   it("시스템 가드레일(크래시)이 유의하게 나빠짐: 중단 후 원인을 고쳐 재실험", () => {
     const r = readout([
       prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.03, [-0.04, -0.02], true)]),
@@ -150,6 +162,14 @@ describe("judgeBaemin: 실제 시뮬레이터 결과", () => {
     expect(pick(base({ duration_days: 7 }), P1_OPTS)).toEqual({ deploy: "partial", no_deploy: "wrong", extend_rerun: "correct" });
   });
 
+  it("P1 순차 검정: 표본이 커서 첫 주 안에 멈추므로 기간 연장 재실험이 정답이고, 근거에 조기 종료가 보인다", () => {
+    const d = base({ stopping: "sequential" });
+    expect(pick(d, P1_OPTS)).toEqual({ deploy: "partial", no_deploy: "wrong", extend_rerun: "correct" });
+    const rr = run(d);
+    expect(rr.result.stoppedAt!).toBeLessThanOrEqual(7);
+    expect(judgeBaemin("p1", "deploy", rr)!.reason).toContain(`순차 검정 경계를 넘어 ${rr.result.stoppedAt}일째에 일찍 멈췄어요`);
+  });
+
   it("P2 노출 기준·램프업 없음(SRM): 배포 안 함이 정답", () => {
     expect(pick(p2({ count_basis: "exposure" }), ["full_deploy", "no_deploy", "deploy_followup"])).toEqual({ full_deploy: "wrong", no_deploy: "correct", deploy_followup: "wrong" });
   });
@@ -173,5 +193,116 @@ describe("judgeBaemin: 실제 시뮬레이터 결과", () => {
 
   it("플러그인에 judge 가 연결돼 있다", () => {
     expect(typeof baeminPlugin.judge).toBe("function");
+  });
+});
+
+describe("judgeBaemin: QA 보강", () => {
+  const abandonGood = (extra: Partial<Readout> = {}) =>
+    readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.03, [-0.04, -0.02], true)])], extra);
+  const P2_OPTS = ["full_deploy", "no_deploy", "deploy_followup"];
+  const P3_OPTS = ["rollback", "deploy", "expand_rerun"];
+  const wk = { ramp: "10_week1_50_week2" };
+
+  it("SIMPSON_RISK(램프로 배정 비율이 바뀐 기간을 합쳐서 분석)는 중단과 같은 취급: 배포는 오답, 재실험이 정답, 근거에 합쳐 분석한 문제가 있다", () => {
+    const r = abandonGood({ flags: ["SIMPSON_RISK"] });
+    const d = base(wk);
+    expect(verdicts(d, r, P1_OPTS)).toEqual({ deploy: "wrong", no_deploy: "partial", extend_rerun: "correct" });
+    expect(judge(d, r, "deploy").reason).toMatch(/합쳐서 분석/);
+    expect(judge(d, r, "deploy").reason).toMatch(/층화/);
+    // 재실험 선택지가 없는 P2 에서는 배포 안 함이 가장 가까운 정답
+    expect(verdicts(p2(wk), r, P2_OPTS)).toEqual({ full_deploy: "wrong", no_deploy: "correct", deploy_followup: "wrong" });
+  });
+
+  it("실제 시뮬레이터: P3 트리거 로깅·쿠폰 low·주차 램프·합산 분석은 배포가 오답이고, 층화 분석이면 SIMPSON 취급이 사라진다", () => {
+    const pooled = p3({ ...wk, analysis_mode: "pooled" });
+    const rr = { design: pooled, result: simulateBaemin(pooled) };
+    expect(rr.result.flags).toContain("SIMPSON_RISK");
+    expect(judgeBaemin("p3", "deploy", rr)!.verdict).toBe("wrong");
+    expect(judgeBaemin("p3", "expand_rerun", rr)!.verdict).toBe("correct");
+    const strat = p3({ ...wk, analysis_mode: "stratified" });
+    const rs = { design: strat, result: simulateBaemin(strat) };
+    expect(rs.result.flags).not.toContain("SIMPSON_RISK");
+    expect(judgeBaemin("p3", "expand_rerun", rs)!.reason).not.toContain("층화");
+  });
+
+  it("실제 시뮬레이터: P2 주차 램프 합산 분석은 전면 배포가 오답, 층화하면 전면 배포는 오답이 아니다", () => {
+    const pooled = p2({ ...wk, analysis_mode: "pooled" });
+    const rp = { design: pooled, result: simulateBaemin(pooled) };
+    expect(judgeBaemin("p2", "full_deploy", rp)!.verdict).toBe("wrong");
+    const strat = p2({ ...wk, analysis_mode: "stratified" });
+    const rs = { design: strat, result: simulateBaemin(strat) };
+    expect(judgeBaemin("p2", "full_deploy", rs)!.verdict).not.toBe("wrong");
+  });
+
+  it("P3 트리거 환산은 주문전환율에만 쓴다: 다른 지표는 환산 없이 분류하고 희석 문구도 없다", () => {
+    const panels = { trigger: { biased: { exposed: { n: 100 } } } };
+    const aov = (cmps: Comparison[]) => readout([{ key: "aov", label: "평균주문금액(원)", role: "P", type: "mean", cmps }], { panels });
+    const r = aov([cmpOf("B", 500, [-500, 1500], false)]);
+    const d = p3({ metrics: { primary: "aov", guardrails: [], secondary: [] } });
+    const reason = judge(d, r, "expand_rerun").reason;
+    expect(reason).not.toContain("트리거 사용자 기준");
+    expect(reason).not.toContain("희석");
+    // 주문전환율은 그대로 환산한다
+    const conv = readout([prop("conv", "커머스 주문전환율", "P", [cmpOf("B", 0.002, [-0.002, 0.006], false)])], { panels });
+    expect(judge(p3(), conv, "expand_rerun").reason).toContain("트리거 사용자 기준");
+  });
+
+  it("구간이 0 을 포함하지 않는데 보정·순차 검정 때문에 유의하지 않으면 '0을 포함'이라고 쓰지 않는다", () => {
+    const r = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.03, [-0.045, -0.015], false)])]);
+    const reason = judge(base(), r, "extend_rerun").reason;
+    expect(reason).toContain("보정 후에는 유의하지 않아요");
+    expect(reason).not.toContain("구간이 0을 포함");
+    // 구간이 실제로 0 을 포함하면 기존 문구
+    const plain = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.01, [-0.04, 0.02], false)])]);
+    expect(judge(base(), plain, "extend_rerun").reason).toContain("구간이 0을 포함");
+  });
+
+  it("유의하지만 효과가 MDE 보다 작은데 일찍 멈췄다면 멈춘 이유가 근거에 보이고, 기간을 늘린 재실험이 정답", () => {
+    const r = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.012, [-0.02, -0.004], true)])], { stoppedAt: 2 });
+    const d = base({ stopping: "peek_stop" });
+    const j = judge(d, r, "extend_rerun");
+    expect(j.verdict).toBe("correct");
+    expect(j.reason).toContain("매일 확인하다 유의해져 2일째에 일찍 멈췄어요");
+    expect(judge(d, r, "no_deploy").verdict).toBe("partial");
+    // 계획한 기간을 채운 같은 결과는 그대로 재실험 오답
+    const full = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.012, [-0.02, -0.004], true)])]);
+    expect(judge(base(), full, "extend_rerun").verdict).toBe("wrong");
+  });
+
+  it("재실험 선택지가 없는 P2·P4 에서 첫 주만 본 개선 결과에도 정답 선택지가 하나 있다", () => {
+    const r = abandonGood({ stoppedAt: 4 });
+    const d = p2({ stopping: "sequential", ramp: "10_50_100" });
+    const v = verdicts(d, r, P2_OPTS);
+    expect(Object.values(v).filter((x) => x === "correct")).toHaveLength(1);
+    expect(v).toEqual({ full_deploy: "partial", no_deploy: "wrong", deploy_followup: "correct" });
+    // P4: 그룹별 배포가 정답
+    const conv = readout([prop("conv", "커머스 주문전환율", "P", [cmpOf("B", 0.03, [0.02, 0.04], true)])], { stoppedAt: 4 });
+    const v4 = verdicts(p4({ arms: ["A", "B"], stopping: "sequential" }), conv, ["deploy_b", "deploy_c", "none_learn"]);
+    expect(v4.deploy_b).toBe("correct");
+    expect(v4.none_learn).toBe("wrong");
+  });
+
+  it("신뢰구간 문구는 설계의 α 를 따른다", () => {
+    const r = abandonGood();
+    expect(judge(base({ alpha: 0.05 }), r, "deploy").reason).toContain("95% 구간");
+    expect(judge(base({ alpha: 0.1 }), r, "deploy").reason).toContain("90% 구간");
+    expect(judge(base({ alpha: 0.01 }), r, "deploy").reason).toContain("99% 구간");
+  });
+
+  it("Primary 자체가 나빠졌으면 '반대로' 같은 위험 문구를 덧붙이지 않는다", () => {
+    const aov = { key: "aov", label: "평균주문금액(원)", role: "S" as const, type: "mean" as const, cmps: [cmpOf("B", -1100, [-1500, -700], true)] };
+    const r = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", 0.02, [0.01, 0.03], true)]), aov], {
+      panels: { segments: { first_order: { abandon: { d: 0.02, significant: true } } } },
+    });
+    const reason = judge(p2(), r, "no_deploy").reason;
+    expect(reason).toContain("유의하게 나빠졌어요");
+    expect(reason).not.toContain("반대로");
+    expect(reason).not.toContain("다만");
+  });
+
+  it("P4 [A, C] 는 B 가 없어도 판정이 되고 C 만 본다", () => {
+    const c = readout([prop("conv", "커머스 주문전환율", "P", [cmpOf("C", 0.03, [0.02, 0.04], true)])]);
+    const d = p4({ arms: ["A", "C"] });
+    expect(verdicts(d, c, ["deploy_b", "deploy_c", "none_learn"])).toEqual({ deploy_b: "wrong", deploy_c: "correct", none_learn: "wrong" });
   });
 });

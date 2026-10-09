@@ -203,7 +203,8 @@ export function simulateFinals(d: DesignP2, opts: SimOptions = {}): Readout {
 
   // ── 플래그 ──
   const flags: Flag[] = [];
-  if (d.primary !== "retention" && !ex && stop < 4) flags.push("NOVELTY");
+  // 신규성은 시청 시간에만 얹힌다(대리 지표·리텐션에는 없음, CALIBRATION #8)
+  if (d.primary === "hours" && !ex && stop < 4) flags.push("NOVELTY");
   if (d.stopping === "peek_stop") flags.push("PEEKED");
   if (d.correction === "none" && m >= 3) flags.push("MULTIPLE_TESTING");
   if (achievedPower !== undefined && achievedPower < 0.5) flags.push("UNDERPOWERED");

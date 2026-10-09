@@ -22,6 +22,11 @@ describe("정답 공개", () => {
     expect(m.size).toBe(1);
   });
 
+  it("시간대 표기가 섞여도 시각이 가장 늦은 실행을 고른다", () => {
+    const m = latestRunPerPhase([run("p1", "2026-10-04T09:00:00+09:00", ["SRM"]), run("p1", "2026-10-04T01:00:00Z", ["PEEKED"])], "t1");
+    expect(m.get("p1")!.result.flags).toEqual(["PEEKED"]);
+  });
+
   it("원문 비교 해설은 Phase 가 속한 스텝에 붙고, 함정은 이름과 함께 나온다", () => {
     const out = buildReveal(baeminPlugin, [run("p1", "2026-01-02", ["SRM", "PEEKED"])], "t1");
     expect(out.items.length).toBeGreaterThan(0);

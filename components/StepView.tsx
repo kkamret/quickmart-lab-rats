@@ -1,8 +1,8 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import type { ClientCase, PhaseDef } from "@/lib/cases/types";
 import type { LabAdapter } from "@/lib/lab/adapter";
-import { decisionSchema, formatIssues, latestOf, simPhaseOf, stepPhases, type Submission } from "@/lib/lab/phase";
+import { decisionSchema, formatIssues, issueFieldNames, latestOf, simPhaseOf, stepPhases, type Submission } from "@/lib/lab/phase";
 import type { StepKey, StepStatus } from "@/lib/steps";
 import type { TeamReadout } from "@/lib/sim/core/readout";
 import { getCaseUi } from "./cases/registry";
@@ -12,6 +12,8 @@ import { Badge, Button, Card, ErrorText, inputClass, PhaseIntro, TheoryNote, Why
 
 type Obj = Record<string, unknown>;
 type RunKey = string; // `${phaseKey}:${mode}`
+/** 한 번 실행한 결과. version 은 실행에 쓴 설계의 제출 버전이고, alpha 는 그 설계의 유의수준이다. */
+type Run = { res: TeamReadout | { error: string }; version?: number; alpha?: number };
 
 const PREV_PHASE: Record<string, string> = { p2: "p1", p3: "p2", p4: "p3" };
 
@@ -22,14 +24,17 @@ type Ctx = {
   adapter: LabAdapter;
   subs: Submission[];
   reload: () => Promise<void>;
-  runs: Record<RunKey, TeamReadout | { error: string }>;
-  setRun: (k: RunKey, v: TeamReadout | { error: string }) => void;
+  runs: Record<RunKey, Run>;
+  setRun: (k: RunKey, v: Run) => void;
+  /** 제출 전 폼 초안(Phase 별). 앞 Phase 설계가 바뀌어 폼을 다시 만들 때도 입력한 내용을 잃지 않게 한다. */
+  drafts: MutableRefObject<Record<string, Obj>>;
 };
 
 /** 사례 플러그인이 정의한 Phase 를 순서대로 보여준다: 진단/설계 폼 → 제출 → 시뮬 → Readout → 결정 */
 export function StepView({ client, step, status, adapter }: { client: ClientCase; step: StepKey; status: StepStatus; adapter: LabAdapter }) {
   const [subs, setSubs] = useState<Submission[] | null>(null);
   const [runs, setRuns] = useState<Ctx["runs"]>({});
+  const drafts = useRef<Record<string, Obj>>({});
   const reload = useCallback(async () => setSubs(await adapter.loadSubmissions()), [adapter]);
   useEffect(() => { reload(); }, [reload]);
 
@@ -37,7 +42,7 @@ export function StepView({ client, step, status, adapter }: { client: ClientCase
   if (phases.length === 0) return <Card><p className="text-ink2">이 스텝에는 이 사례의 화면이 없어요.</p></Card>;
   if (subs === null) return <p className="text-ink3">불러오는 중…</p>;
 
-  const ctx: Ctx = { client, step, status, adapter, subs, reload, runs, setRun: (k, v) => setRuns((r) => ({ ...r, [k]: v })) };
+  const ctx: Ctx = { client, step, status, adapter, subs, reload, runs, setRun: (k, v) => setRuns((r) => ({ ...r, [k]: v })), drafts };
   return (
     <div className="space-y-5">
       <TheoryNote step={step} />
@@ -78,7 +83,7 @@ function Phase({ ctx, def }: { ctx: Ctx; def: PhaseDef }) {
         <FormPhase
           key={`${def.key}-${prev?.version ?? 0}`} /* 제출해도 폼을 다시 만들지 않는다(메시지 유지). 앞 Phase 설계가 바뀌면 이어받기 위해 다시 만든다. */
           ctx={ctx} def={def} sim={sim} kind={kind}
-          initial={(saved?.payload as Obj) ?? ctx.client.defaultDesign(sim, prev?.payload as Obj | undefined)}
+          initial={ctx.drafts.current[sim] ?? (saved?.payload as Obj) ?? ctx.client.defaultDesign(sim, prev?.payload as Obj | undefined)}
         />
       );
     }
@@ -95,15 +100,22 @@ function FormPhase({ ctx, def, sim, kind, initial }: { ctx: Ctx; def: PhaseDef; 
   const { Diagnose, DesignAside } = getCaseUi(ctx.client.key);
   const [value, setValue] = useState<Obj>(initial);
   const [errors, setErrors] = useState<string[]>([]);
+  const [invalid, setInvalid] = useState<string[]>([]);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const editable = ctx.status === "open";
+  const errorsId = `errors-${def.key}`;
+  const change = (v: Obj) => { ctx.drafts.current[sim] = v; setValue(v); };
 
   async function submit() {
     setMsg("");
     const parsed = ctx.client.designSchema[sim].safeParse(value);
-    if (!parsed.success) return setErrors(formatIssues(parsed.error.issues, ctx.client.formMeta[sim]));
+    if (!parsed.success) {
+      setInvalid(issueFieldNames(parsed.error.issues, ctx.client.formMeta[sim]));
+      return setErrors(formatIssues(parsed.error.issues, ctx.client.formMeta[sim]));
+    }
     setErrors([]);
+    setInvalid([]);
     setBusy(true);
     const r = await ctx.adapter.submit({ step: ctx.step, phase: sim, kind, payload: parsed.data as Obj });
     setBusy(false);
@@ -116,9 +128,9 @@ function FormPhase({ ctx, def, sim, kind, initial }: { ctx: Ctx; def: PhaseDef; 
     <div className="space-y-4">
       {def.kind === "diagnose" && Diagnose && <Diagnose />}
       {def.kind === "design" && DesignAside && <DesignAside phase={sim} value={value} />}
-      <AutoForm meta={ctx.client.formMeta[sim]} value={value} onChange={setValue} disabled={!editable} />
+      <AutoForm meta={ctx.client.formMeta[sim]} value={value} onChange={change} disabled={!editable} idPrefix={def.key} invalid={invalid} errorsId={errorsId} />
       {errors.length > 0 && (
-        <ul role="alert" className="list-disc space-y-0.5 rounded-lg bg-neg-soft py-2 pl-7 pr-3 text-sm text-neg">
+        <ul id={errorsId} role="alert" className="list-disc space-y-0.5 rounded-lg bg-neg-soft py-2 pl-7 pr-3 text-sm text-neg">
           {errors.map((e) => <li key={e}>{e}</li>)}
         </ul>
       )}
@@ -133,34 +145,36 @@ function FormPhase({ ctx, def, sim, kind, initial }: { ctx: Ctx; def: PhaseDef; 
 function RunPhase({ ctx, def, hasDesign, modes }: { ctx: Ctx; def: PhaseDef; hasDesign: boolean; modes: ("aa" | "main")[] }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [shown, setShown] = useState<"aa" | "main">(modes[modes.length - 1]);
-  const { Panels, series, periodUnit, armLabels: baseLabels, armLabelsOf } = getCaseUi(ctx.client.key);
+  const { Panels, series, periodUnit, armLabels: baseLabels, armLabelsOf, metricLabels } = getCaseUi(ctx.client.key);
   const locked = ctx.status === "locked" && ctx.adapter.mode === "remote";
+  const sim = simPhaseOf(def.key);
+  const design = latestOf(ctx.subs, sim, "design");
 
   async function run(mode: "aa" | "main") {
     setBusy(mode);
+    const used = design; // 실행을 누른 시점의 최신 설계
     const r = await ctx.adapter.simulate({ phase: def.key, mode });
     setBusy(null);
-    ctx.setRun(`${def.key}:${mode}`, r.ok ? r.readout : { error: r.error });
+    ctx.setRun(`${def.key}:${mode}`, { res: r.ok ? r.readout : { error: r.error }, version: used?.version, alpha: typeof used?.payload.alpha === "number" ? used.payload.alpha : undefined });
     setShown(mode);
   }
 
-  const result = ctx.runs[`${def.key}:${shown}`];
+  const entry = ctx.runs[`${def.key}:${shown}`];
+  const result = entry?.res;
+  // 설계를 다시 제출했으면 화면의 결과는 이전 설계로 돌린 것이다
+  const stale = !!entry && entry.version !== undefined && design !== undefined && entry.version !== design.version;
+  const hasAnyRun = modes.some((m) => ctx.runs[`${def.key}:${m}`]);
   const label = (m: "aa" | "main") => (m === "aa" ? "A/A 실행" : modes.length === 1 ? "결과 보기" : "본 실험 실행");
   return (
     <div className="space-y-4">
       {!hasDesign && <p className="text-sm text-ink2">먼저 설계를 제출해 주세요. 제출한 최신 설계로 시뮬레이션해요.</p>}
-      {def.kind === "run" && (
-        <p className="text-sm text-ink2">
-          본 실험 전에 <b>A/A</b>(두 그룹에 같은 화면)로 먼저 돌려볼 수 있어요. 중간 확인 규칙을 정했다면 그 규칙대로 자동 종료돼요.
-        </p>
-      )}
       <div className="flex flex-wrap items-center gap-2">
         {modes.map((m) => (
           <Button key={m} variant={m === "aa" ? "ghost" : "primary"} disabled={!hasDesign || locked || busy !== null} onClick={() => run(m)}>
             {busy === m ? "계산 중…" : label(m)}
           </Button>
         ))}
-        {modes.length > 1 && (
+        {modes.length > 1 && hasAnyRun && (
           <div className="ml-auto flex gap-1 text-sm">
             {modes.map((m) => (
               <button key={m} onClick={() => setShown(m)} className={`rounded-full border px-3 py-1 ${shown === m ? "border-brand bg-brand-soft font-semibold" : "border-line text-ink2"}`}>
@@ -180,7 +194,21 @@ function RunPhase({ ctx, def, hasDesign, modes }: { ctx: Ctx; def: PhaseDef; has
       )}
       {result && "error" in result && <ErrorText>{result.error}</ErrorText>}
       {result && !("error" in result) && (
-        <ReadoutView readout={result} series={series} periodUnit={periodUnit} armLabels={{ ...baseLabels, ...(armLabelsOf?.(result.panels) ?? {}) }}>{Panels && <Panels phase={def.key} panels={result.panels} />}</ReadoutView>
+        <>
+          {stale && (
+            <p role="status" className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">
+              이전 설계(v{entry.version}) 결과예요. 설계를 다시 제출했으니(v{design?.version}) 다시 실행해 주세요.
+            </p>
+          )}
+          <div className={stale ? "opacity-50" : ""}>
+            <ReadoutView
+              readout={result} series={series} periodUnit={periodUnit} alpha={entry.alpha} metricLabels={metricLabels}
+              armLabels={{ ...baseLabels, ...(armLabelsOf?.(result.panels) ?? {}) }}
+            >
+              {Panels && <Panels phase={def.key} panels={result.panels} primary={result.metrics.find((m) => m.role === "P")?.key} />}
+            </ReadoutView>
+          </div>
+        </>
       )}
     </div>
   );
@@ -201,6 +229,7 @@ function DecidePhase({ ctx, sim, hasDesign }: { ctx: Ctx; sim: string; hasDesign
 
   async function submit() {
     setMsg("");
+    if (!hasDesign) return setErr("먼저 설계를 제출해 주세요. 설계 없이는 결정을 제출할 수 없어요.");
     const parsed = decisionSchema(options.map((o) => o.id), fields).safeParse({ option, rationale, ...extra });
     if (!parsed.success) return setErr(option ? parsed.error.issues[0].message : "선택지 중에서 골라주세요");
     setErr("");
@@ -214,7 +243,7 @@ function DecidePhase({ ctx, sim, hasDesign }: { ctx: Ctx; sim: string; hasDesign
 
   return (
     <div className="space-y-3">
-      {!hasDesign && <p className="text-sm text-ink2">설계를 제출하고 결과를 본 뒤에 결정해요.</p>}
+      {!hasDesign && <p className="text-sm text-ink2">설계를 제출하고 결과를 본 뒤에 결정해요. 설계를 제출하기 전에는 결정을 제출할 수 없어요.</p>}
       <div role="radiogroup" className="space-y-2">
         {options.map((o) => (
           <label key={o.id} className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${option === o.id ? "border-brand bg-brand-soft" : "border-line bg-sunk"} ${editable ? "" : "opacity-60"}`}>
@@ -241,7 +270,7 @@ function DecidePhase({ ctx, sim, hasDesign }: { ctx: Ctx; sim: string; hasDesign
       ))}
       <ErrorText>{err}</ErrorText>
       <div className="flex items-center gap-3">
-        <Button onClick={submit} disabled={!editable || busy}>{busy ? "제출 중…" : "결정 제출"}</Button>
+        <Button onClick={submit} disabled={!editable || busy || !hasDesign}>{busy ? "제출 중…" : "결정 제출"}</Button>
         {msg && <span className="text-sm text-pos">{msg}</span>}
       </div>
     </div>

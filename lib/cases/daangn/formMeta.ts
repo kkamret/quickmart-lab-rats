@@ -37,7 +37,7 @@ export const formMeta: Record<string, FieldMeta[]> = {
   ],
   p1: [
     { name: "assignment_timing", label: "배정 시점", help: "언제 사용자를 대조군/실험군에 나눌까요?", type: "select", options: TIMING },
-    { name: "analysis_population", label: "분석 모집단", help: "누구를 대상으로 작성률을 계산할까요? 배정한 범위 안에서만 고를 수 있어요.", type: "select", options: POPULATION },
+    { name: "analysis_population", label: "분석 모집단", help: "누구를 대상으로 작성률을 계산할까요? 배정한 범위보다 넓게 고르면 시뮬레이션이 실행되지 않아요.", type: "select", options: POPULATION },
     {
       name: "data_source", label: "데이터 소스", type: "select",
       options: [

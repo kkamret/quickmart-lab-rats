@@ -196,6 +196,45 @@ describe("reviewTeam / reviewClass (캐시·쿨다운·권한 범위)", () => {
     expect(open.output.vs_original).toBe("원문은 달랐어요");
     spy.mockRestore();
   });
+  it("정답 공개 전에는 달성 검정력을 모델 입력에 싣지 않고, 공개 뒤에는 싣는다", async () => {
+    delete process.env.UPSTAGE_API_KEY;
+    const inputs: string[] = [];
+    const spy = vi.spyOn(await import("../generate"), "generateJson").mockImplementation(async (_l, _s, p) => {
+      inputs.push(p.user);
+      return { score: 70, strengths: [], issues: [], nudge_questions: ["q?"], vs_original: "" } as never;
+    });
+    const t = seed();
+    const db = fakeDb(t);
+    await reviewTeam(db, { classId: "c1", teamId: "t1", step: "s2_design" }, clock.now);
+    expect(JSON.parse(inputs[0]).sim.achievedPower).toBeNull();
+    t.classes[0].reveal_answers = true;
+    clock.now += COOLDOWN_MS + 1000;
+    await reviewTeam(db, { classId: "c1", teamId: "t1", step: "s2_design" }, clock.now);
+    expect(typeof JSON.parse(inputs[1]).sim.achievedPower).toBe("number");
+    spy.mockRestore();
+  });
+  it("가장 최근 실행은 시간대 표기가 섞여도 시각으로 고른다", async () => {
+    delete process.env.UPSTAGE_API_KEY;
+    const inputs: string[] = [];
+    const spy = vi.spyOn(await import("../generate"), "generateJson").mockImplementation(async (_l, _s, p) => {
+      inputs.push(p.user);
+      return { score: 70, strengths: [], issues: [], nudge_questions: ["q?"], vs_original: "" } as never;
+    });
+    const t = seed();
+    const older = simulateBaemin({ ...design, duration_days: 7 });
+    // 문자열로는 '09:00+09:00' 이 더 크지만 실제로는 00:00Z 라서 오래된 실행이다
+    t.sim_runs[0] = { ...t.sim_runs[0], created_at: "2026-10-04T01:00:00Z" };
+    t.sim_runs.push({ team_id: "t1", class_id: "c1", case_key: "baemin", phase: "p1", design: { ...design, duration_days: 7 }, design_hash: "h2", result: older, created_at: "2026-10-04T09:00:00+09:00" });
+    await reviewTeam(fakeDb(t), { classId: "c1", teamId: "t1", step: "s2_design" }, clock.now);
+    expect(JSON.parse(inputs[0]).sim.metrics[0].comparisons[0].d).toBeCloseTo(t.sim_runs[0].result.metrics[0].comparisons[0].d, 10);
+    spy.mockRestore();
+  });
+  it("mock 점수는 정답 공개 전에 플래그 수를 드러내지 않는다", () => {
+    const s = summarizeSim(simulateBaemin(design));
+    const closed = mockTeamReview({ case: "baemin", step: "s2_design", rubric: "", submission: {}, sim: s, revealed: false });
+    const none = mockTeamReview({ case: "baemin", step: "s2_design", rubric: "", submission: {}, sim: { ...s, flags: [] }, revealed: false });
+    expect(closed.score).toBe(none.score);
+  });
   it("class: 제출이 하나도 없으면 409", async () => {
     const db = fakeDb({ ...seed(), submissions: [] });
     await expect(reviewClass(db, { classId: "c1", step: "s2_design" }, clock.now)).rejects.toMatchObject({ status: 409 });

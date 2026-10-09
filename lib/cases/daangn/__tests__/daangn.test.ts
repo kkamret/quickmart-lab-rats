@@ -57,10 +57,22 @@ describe("당근 검증 시나리오", () => {
     expect(server.flags).not.toContain("INSTRUMENTATION");
   });
 
-  it("#4 install_all + all_assigned: 효과 0.3%p 미만, UNDERPOWERED", () => {
-    const r = simulateDaangn(p1({ assignment_timing: "install_all", analysis_population: "all_assigned" }));
-    expect(Math.abs(cmp(r, "review_rate").d) * 100).toBeLessThan(0.3);
+  it("#4 install_all + all_assigned (mde_pp=2): 효과 약 0.15%p 로 통계적으로는 유의하지만 MDE 에 한참 못 미쳐 UNDERPOWERED", () => {
+    const r = simulateDaangn(p1({ assignment_timing: "install_all", analysis_population: "all_assigned", mde_pp: 2 }));
+    const c = cmp(r, "review_rate");
+    expect(Math.abs(c.d) * 100).toBeLessThan(0.3);
+    expect(c.d * 100).toBeGreaterThan(0.1);
+    expect(c.significant).toBe(true);
     expect(r.flags).toContain("UNDERPOWERED");
+    // MDE 를 0.6%p 이하로 잡으면 MDE 비교 규칙이 꺼져서 UNDERPOWERED 가 사라진다
+    expect(simulateDaangn(p1({ assignment_timing: "install_all", analysis_population: "all_assigned", mde_pp: 0.6 })).flags).not.toContain("UNDERPOWERED");
+  });
+
+  it("§3-3 install_all 로 배정하고 화면 진입자로 좁혀 분석하면 정당한 트리거 분석: review_screen_open 배정과 같은 결과", () => {
+    const trig = simulateDaangn(p1({ assignment_timing: "install_all", analysis_population: "review_screen_open" }));
+    const base = simulateDaangn(p1());
+    expect(trig.metrics).toEqual(base.metrics);
+    expect(trig.flags).toEqual(base.flags);
   });
 
   it("#5 metric_definition=started: 효과 6~8%p, GOODHART", () => {
@@ -68,6 +80,10 @@ describe("당근 검증 시나리오", () => {
     expect(cmp(r, "review_rate").d * 100).toBeGreaterThanOrEqual(6);
     expect(cmp(r, "review_rate").d * 100).toBeLessThanOrEqual(8);
     expect(r.flags).toContain("GOODHART");
+    // 클라이언트 이벤트로 세면 중복 이벤트까지 얹혀 약 9%p
+    const client = cmp(simulateDaangn(p1({ metric_definition: "started", data_source: "client_events" })), "review_rate").d * 100;
+    expect(client).toBeGreaterThan(8);
+    expect(client).toBeLessThan(10);
   });
 
   it("#6 user_id_hash + 새 salt + 첫 실행 배정 + 서버: SRM 없음, 효과 3.8~4.2%p, 짧은 후기 +2.7~3.3%p", () => {
@@ -108,11 +124,17 @@ describe("당근 검증 시나리오", () => {
     expect(c.significant).toBe(true);
   });
 
-  it("#10 user + sell_through_7d: 상대 +0.5~0.9%", () => {
+  it("#10 user + sell_through_7d: 상대 +0.5~0.9%, CONTAMINATION. 7일부터 유의(검정력 7일 ≈0.59, 14일 ≈0.87)", () => {
     const r = simulateDaangn(p3({ primary: "sell_through_7d" }));
     const c = cmp(r, "sell_through_7d");
     expect(c.rel * 100).toBeGreaterThanOrEqual(0.5);
     expect(c.rel * 100).toBeLessThanOrEqual(0.9);
+    expect(c.significant).toBe(true);
+    expect(r.flags).toContain("CONTAMINATION");
+    expect(r.achievedPower!).toBeCloseTo(0.87, 1);
+    const w1 = simulateDaangn(p3({ primary: "sell_through_7d", duration_days: 7 }));
+    expect(cmp(w1, "sell_through_7d").significant).toBe(true);
+    expect(w1.achievedPower!).toBeCloseTo(0.59, 1);
   });
 
   it("#11 neighborhood + cluster_robust, 28일: 판매완료율 상대 +1.2~1.8%, CI 폭이 naive 의 2배 이상", () => {
@@ -123,6 +145,8 @@ describe("당근 검증 시나리오", () => {
     expect(c.rel * 100).toBeLessThanOrEqual(1.8);
     expect(ciWidth(robust, "sell_through_7d")).toBeGreaterThanOrEqual(2 * ciWidth(naive, "sell_through_7d"));
     expect(robust.flags).not.toContain("NAIVE_SE");
+    // 동네는 개별로 만들지 않고 평균 크기로만 다룬다: 28일이면 동네당 검색 사용자 약 1,723명
+    expect((robust.panels.clusters as { meanUsersPerNeighborhood: number }).meanUsersPerNeighborhood).toBe(1723);
   });
 
   it("#12 neighborhood + naive: NAIVE_SE, A/A 400회 위양성률 15% 이상", () => {
@@ -157,9 +181,23 @@ describe("당근 입력 검증", () => {
   it("A/A 를 설계에서 고르지 않았으면 A/A 실행은 거부된다", () => {
     expect(() => simulateDaangn(p1({ run_aa_first: false, aa: true }))).toThrow(SimulationRejected);
   });
-  it("배정보다 넓은 분석 모집단은 거부된다", () => {
+  it("배정보다 넓은 분석 모집단은 거부된다 (all_assigned 는 '배정된 전원'이라 언제나 허용)", () => {
+    expect(() => simulateDaangn(p1({ assignment_timing: "review_screen_open", analysis_population: "review_received" }))).toThrow(SimulationRejected);
     expect(() => simulateDaangn(p1({ assignment_timing: "review_screen_open", analysis_population: "all_assigned" }))).not.toThrow();
     expect(() => simulateDaangn(p1({ assignment_timing: "review_received", analysis_population: "all_assigned" }))).not.toThrow();
+  });
+  it("중간 확인: 표본이 커서 peek_stop·sequential 은 대부분 1일차에 멈추고, PEEKED 는 peek_stop 에만. A/A 는 항상 fixed", () => {
+    for (const make of [p1, p2]) {
+      const peek = simulateDaangn(make({ stopping: "peek_stop" }));
+      expect(peek.stoppedAt).toBe(1);
+      expect(peek.flags).toContain("PEEKED");
+      const seq = simulateDaangn(make({ stopping: "sequential" }));
+      expect(seq.stoppedAt).toBe(1);
+      expect(seq.flags).not.toContain("PEEKED");
+      const aa = simulateDaangn(make({ stopping: "peek_stop", aa: true, aa_days: 7 }));
+      expect(aa.stoppedAt).toBe(7);
+      expect(aa.flags).not.toContain("PEEKED");
+    }
   });
   it("필수 칸이 비면 validateDesign 이 한국어 메시지를 돌려준다", () => {
     const v = validateDesign({ phase: "p3" });

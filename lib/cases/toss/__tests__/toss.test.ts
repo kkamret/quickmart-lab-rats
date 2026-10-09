@@ -65,6 +65,10 @@ describe("토스 검증 시나리오", () => {
     expect(user.flags).not.toContain("NAIVE_SE");
     // 같은 데이터이므로 점추정은 같다
     expect(cmp(push, "push_ctr").d).toBeCloseTo(cmp(user, "push_ctr").d, 10);
+    // 기간이 길수록 비율이 커지고, 6주 미만이면 2.5배 아래
+    const ratioAt = (w: number) => width(simulateToss(p1({ duration_weeks: w }))) / width(simulateToss(p1({ duration_weeks: w, ctr_analysis_unit: "push" })));
+    expect(ratioAt(4)).toBeLessThan(2.5);
+    expect(ratioAt(12)).toBeGreaterThan(ratio);
   });
 
   it("#3 클릭 지표 제외: RATIO_COMPOSITION, 구성 효과 패널 비활성", () => {
@@ -97,6 +101,13 @@ describe("토스 검증 시나리오", () => {
     }
   });
 
+  it("§3-3 공격적 규칙: s≈0.38(N=2, W=30, C=14, same_service)부터는 6%·8주에서 라이트 AU 악화가 유의", () => {
+    const r = simulateToss(p1({ variants: { V1: { N: 2, W: 30, C: 14, G: "same_service" }, V2: REF2 } }));
+    expect(truthOf(r).V1.sendReduction).toBeGreaterThan(0.37);
+    expect(lightAu(r).B.d).toBeLessThan(0);
+    expect(lightAu(r).B.p).toBeLessThan(0.05);
+  });
+
   it("#6 서비스 AU 가드레일: 보정 없으면 24개 중 1~2개 우연 유의 + MULTIPLE_TESTING, BH 면 0개", () => {
     const none = simulateToss(p1({ guardrails: ["app_open_au", "service_au"] }));
     const sv = none.panels.services as { tests: number; significant: number };
@@ -107,9 +118,10 @@ describe("토스 검증 시나리오", () => {
     const bh = simulateToss(p1({ guardrails: ["app_open_au", "service_au"], correction: "bh" }));
     expect((bh.panels.services as { significant: number }).significant).toBe(0);
     expect(bh.flags).not.toContain("MULTIPLE_TESTING");
-    // 푸시 단위 SE 로 보면 서비스 표가 온통 유의해진다
+    // 푸시 단위 SE 로 보면 서비스 표의 상당수(24개 중 약 3분의 1)가 유의해진다
     const push = simulateToss(p1({ guardrails: ["app_open_au", "service_au"], ctr_analysis_unit: "push" }));
     expect((push.panels.services as { significant: number }).significant).toBeGreaterThan(6);
+    expect((push.panels.services as { significant: number }).significant).toBeLessThan(13);
   });
 
   it("#7 s5: A+V1+V2, 30%, 6주, CUPED 끔: AU 유의 악화 없음 (원문 일치)", () => {
@@ -132,9 +144,9 @@ describe("토스 검증 시나리오", () => {
     expect(on.C.p).toBeGreaterThan(0.3);
   });
 
-  it("#9 peek_stop: 1~2주차 종료, PEEKED(+SHORT_DURATION)", () => {
+  it("#9 peek_stop(메인 CTR): 1주차 종료, PEEKED + SHORT_DURATION", () => {
     const r = simulateToss(p1({ stopping: "peek_stop" }));
-    expect(r.stoppedAt!).toBeLessThanOrEqual(2);
+    expect(r.stoppedAt).toBe(1);
     expect(r.flags).toContain("PEEKED");
     expect(r.flags).toContain("SHORT_DURATION");
     expect(r.periods).toHaveLength(r.stoppedAt!);
@@ -173,12 +185,16 @@ describe("토스 스펙 값과 확인 규칙", () => {
     expect(sendReduction({ N: 2, W: 30, C: 30, G: "same_purpose" })).toBeCloseTo(0.5255, 3);
     expect(sendReduction({ N: 2, W: 30, C: 30, G: "same_purpose" })).toBeLessThanOrEqual(0.55);
   });
-  it("오프라인 리플레이는 클릭 손실을 온라인 진짜 값보다 크게 추정한다(약 4배)", () => {
+  it("오프라인 리플레이는 클릭 손실을 온라인 진짜 값보다 크게 추정한다(약 5~8배)", () => {
     const r = simulateToss(p1(), { noise: false });
-    const t = (r.panels._truth as { variants: Record<string, { deltaClicksRel: number; offlineClickLossRel: number }> }).variants.V1;
+    const tv = (r.panels._truth as { variants: Record<string, { deltaClicksRel: number; offlineClickLossRel: number }> }).variants;
+    const t = tv.V1;
     expect(t.deltaClicksRel).toBeCloseTo(-0.0053, 3);
-    expect(t.offlineClickLossRel / t.deltaClicksRel).toBeGreaterThan(3.5);
-    expect(t.offlineClickLossRel / t.deltaClicksRel).toBeLessThan(7);
+    // REF_V1 ≈ 6.3배, REF_V2 ≈ 7.7배 (N=2 는 ≈ 5.2배)
+    for (const vn of ["V1", "V2"]) {
+      expect(tv[vn].offlineClickLossRel / tv[vn].deltaClicksRel, vn).toBeGreaterThan(5);
+      expect(tv[vn].offlineClickLossRel / tv[vn].deltaClicksRel, vn).toBeLessThan(8);
+    }
     expect(replay(REF1 as never).bySegment.find((x) => x.key === "light")!.s).toBeLessThan(0.25);
     const gap = (r.panels.replay_gap as { rows: { offlineClickLossRel: number; onlineClicksRel: number }[] }).rows;
     expect(gap[0].offlineClickLossRel).toBeLessThan(-0.03);
@@ -207,5 +223,20 @@ describe("토스 스펙 값과 확인 규칙", () => {
     const r = simulateToss(p1({ aa: true, guardrails: ["app_open_au", "service_au"], correction: "bh" }));
     expect(Math.abs(cmp(r, "push_ctr").d)).toBeLessThan(0.001);
     expect(r.flags).toEqual([]);
+  });
+  it("A/A: 짧게 돌려도 진짜 효과가 없어서 SHORT_DURATION 은 뜨지 않는다", () => {
+    for (const duration_weeks of [2, 4, 5]) {
+      expect(simulateToss(p1({ aa: true, duration_weeks })).flags, `${duration_weeks}주`).not.toContain("SHORT_DURATION");
+    }
+    // A/A 가 아니면 같은 기간에 뜬다
+    expect(simulateToss(p1({ duration_weeks: 4 })).flags).toContain("SHORT_DURATION");
+  });
+  it("중간 확인: CTR 메인이면 sequential 도 1주차에 멈추고, peek_stop 은 끝까지 가도 PEEKED", () => {
+    const seq = simulateToss(p1({ stopping: "sequential" }));
+    expect(seq.stoppedAt).toBe(1);
+    expect(seq.flags).not.toContain("PEEKED");
+    const peekClicks = simulateToss(p1({ stopping: "peek_stop", primary: "clicks_per_user" }));
+    expect(peekClicks.stoppedAt).toBe(8);
+    expect(peekClicks.flags).toContain("PEEKED");
   });
 });

@@ -36,11 +36,11 @@ function latestSubmissions(rows: SubRow[], teamId: string, phases: string[]): Re
   return Object.fromEntries([...best.entries()].sort().map(([k, r]) => [k, r.payload]));
 }
 
-function latestSim(runs: RunRow[], teamId: string, phases: string[]): SimSummary | null {
+function latestSim(runs: RunRow[], teamId: string, phases: string[], revealed = true): SimSummary | null {
   const mine = runs
     .filter((r) => r.team_id === teamId && phases.includes(r.phase) && !(r.design as { aa?: boolean }).aa)
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
-  return mine[0] ? summarizeSim(mine[0].result) : null;
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || b.created_at.localeCompare(a.created_at));
+  return mine[0] ? summarizeSim(mine[0].result, { revealed }) : null;
 }
 
 type Where = { classId: string; teamId: string | null; step: string; scope: string };
@@ -97,7 +97,7 @@ export async function reviewTeam(db: SupabaseClient, args: { classId: string; te
   const input: TeamReviewInput = {
     case: plugin.key, step: args.step,
     rubric: phases.map((p) => plugin.rubric[p]).filter(Boolean).join("\n"),
-    submission, sim: latestSim((runs.data ?? []) as RunRow[], args.teamId, phases), revealed,
+    submission, sim: latestSim((runs.data ?? []) as RunRow[], args.teamId, phases, revealed), revealed,
     ...(decision_checks.length ? { decision_checks } : {}),
     // 정답 공개 뒤에는 원문 비교 해설을 함께 보낸다(캐시 키에도 들어가므로 공개 전후 결과가 섞이지 않는다)
     ...(revealed ? { original: phases.map((p) => plugin.reveal[p]).filter(Boolean).join("\n") } : {}),

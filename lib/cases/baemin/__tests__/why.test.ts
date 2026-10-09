@@ -9,6 +9,8 @@ import { THEORY, type TheoryKey } from "@/lib/theory";
 import { decisions } from "../decisions";
 import { formMeta } from "../formMeta";
 import { METRIC_KEYS } from "../schema";
+import { simulateBaemin } from "../simulate";
+import { AOV, CRASH, MIN_ORDER_KRW, NEAR_MIN, REPURCHASE7, SURFACE_STORE_HOME_MULT } from "../population";
 import { baeminClient, phases } from "../ui";
 import {
   ACTION_WHY, DECISION_WHY, FIELD_WHY, FIELD_WHY_BY_PHASE, METRIC_WHY, OPTION_WHY, PHASE_INTRO, RATIONALE_WHY, STEP_INTRO, WHY_NONE,
@@ -161,6 +163,38 @@ describe("커버리지", () => {
     }
     for (const def of Object.values(decisions)) for (const o of def.options) expect((o as { why?: Why }).why, o.id).toBeUndefined();
     for (const p of phases) expect(p.intro, p.key).toBeUndefined();
+  });
+});
+
+describe("사례 수치(docs §1)가 모집단 상수·대조군 관측값과 맞는다", () => {
+  const design = (days: number) => ({
+    phase: "p1", hypothesis: { action: "a", behavior: "b", impact: "c" }, scope: { os: "all", surface: "all" }, unit: "user",
+    metrics: { primary: "abandon", guardrails: [], secondary: [] }, alpha: 0.05, power: 0.8, duration_days: days, allocation: 1,
+    ramp: "none", analysis_mode: "pooled", stopping: "fixed", count_basis: "assignment",
+  });
+
+  it("이탈률: 대조군 일반 고객이 실제로 보이는 값(기간 전체 약 58~61%)을 말하고, 기준값 63%를 관측값처럼 말하지 않는다", () => {
+    expect(METRIC_WHY.abandon.text).toContain("약 58~61%");
+    expect(METRIC_WHY.abandon.text).not.toContain("63%");
+    for (const days of [7, 14, 28]) {
+      const seg = simulateBaemin(design(days), { noise: false }).panels.segments as Record<string, Record<string, { arms: { A: { x: number; n: number } } }>>;
+      const a = seg.general.abandon.arms.A;
+      expect(a.x / a.n, `${days}일`).toBeGreaterThan(0.575);
+      expect(a.x / a.n, `${days}일`).toBeLessThan(0.615);
+    }
+  });
+
+  it("크래시율·평균주문금액·근처 주문 비중·7일 재구매율·범위 비중은 모집단 상수와 같다", () => {
+    const pct = (x: number, d = 0) => `${(x * 100).toFixed(d)}%`;
+    // 안드로이드·iOS 신버전 0.42%, 전체 OS(iOS 구버전 포함) 약 0.45%
+    expect(METRIC_WHY.crash.text).toContain(`${pct(CRASH.android, 2).replace("%", "")}~0.45%`);
+    expect(0.92 * CRASH.ios_new + 0.08 * CRASH.ios_old).toBeCloseTo(0.0045, 4);
+    expect(METRIC_WHY.aov.text).toContain(AOV.general.toLocaleString("ko-KR"));
+    expect(METRIC_WHY.near_min_share.text).toContain(`약 ${pct(NEAR_MIN.general)}`);
+    expect(METRIC_WHY.repurchase7.text).toContain(`약 ${pct(REPURCHASE7)}`);
+    expect(METRIC_WHY.min_reach.text).toContain(`${MIN_ORDER_KRW.toLocaleString("ko-KR")}원`);
+    expect(OPTION_WHY["scope.os"].android.text).toContain("59%");
+    expect(OPTION_WHY["scope.surface"].store_home.text).toContain(pct(SURFACE_STORE_HOME_MULT));
   });
 });
 

@@ -51,7 +51,7 @@ export function TeamScreen({ code, teamId }: { code: string; teamId: string }) {
   }
 
   return (
-    <div className="grid min-h-screen md:grid-cols-[252px_minmax(0,1fr)]">
+    <div className="grid min-h-screen grid-cols-[minmax(0,1fr)] md:grid-cols-[252px_minmax(0,1fr)]">
       <nav className="border-b border-line bg-surface p-4 md:sticky md:top-0 md:h-screen md:overflow-auto md:border-b-0 md:border-r">
         <div className="mb-4 flex items-center gap-2.5 px-2">
           <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-brand text-sm font-bold text-white">Q</div>
@@ -60,12 +60,12 @@ export function TeamScreen({ code, teamId }: { code: string; teamId: string }) {
             <small className="text-xs text-ink3">{cls.title}</small>
           </div>
         </div>
-        <ul className="space-y-0.5">
+        <ul className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 md:mx-0 md:block md:space-y-0.5 md:overflow-visible md:p-0">
           {STEP_KEYS.map((k, i) => (
-            <li key={k}>
+            <li key={k} className="shrink-0 md:shrink">
               <button
                 onClick={() => setActive(k)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm ${active === k ? "bg-brand-soft font-semibold text-ink" : "text-ink2 hover:bg-sunk"}`}
+                className={`flex w-full items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 py-2 text-left text-sm ${active === k ? "bg-brand-soft font-semibold text-ink" : "text-ink2 hover:bg-sunk"}`}
               >
                 <span className="w-5 text-xs text-ink3">{i}</span>
                 <span className="flex-1">{STEP_LABELS[k]}</span>
@@ -76,7 +76,7 @@ export function TeamScreen({ code, teamId }: { code: string; teamId: string }) {
         </ul>
       </nav>
 
-      <main className="px-4 pb-20 md:px-9">
+      <main className="min-w-0 px-4 pb-20 md:px-9">
         <div className="sticky top-0 z-10 bg-gradient-to-b from-bg from-70% to-transparent pb-2.5 pt-3.5">
           <div className="flex items-center gap-4 rounded-2xl bg-bar px-4 py-2.5 text-sm text-bar-ink">
             <span className="flex-1">

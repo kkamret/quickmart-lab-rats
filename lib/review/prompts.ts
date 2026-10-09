@@ -12,7 +12,11 @@ export type SimSummary = {
   flags: Flag[];
 };
 
-export function summarizeSim(r: Readout): SimSummary {
+/**
+ * revealed=false(정답 공개 전)에는 달성 검정력을 넣지 않는다. 숨긴 진짜 효과로 계산한 값이라
+ * 모델이 조에게 보이는 피드백에 그 힌트를 비칠 수 있다(규칙 3). 강사용 class·share 는 기본값(공개)을 쓴다.
+ */
+export function summarizeSim(r: Readout, opts: { revealed?: boolean } = {}): SimSummary {
   return {
     phase: r.phase,
     metrics: r.metrics.map((m) => ({
@@ -20,7 +24,7 @@ export function summarizeSim(r: Readout): SimSummary {
       comparisons: m.comparisons.map((c) => ({ arm: c.arm, d: c.d, ci: c.ci, p: c.p, significant: c.significant })),
     })),
     srmP: r.srm?.p ?? null,
-    achievedPower: r.achievedPower ?? null,
+    achievedPower: opts.revealed === false ? null : (r.achievedPower ?? null),
     flags: r.flags ?? [],
   };
 }
@@ -56,6 +60,7 @@ export function teamPrompt(input: TeamReviewInput) {
     "당신은 A/B 테스트 실습 수업의 조교입니다. 조가 제출한 설계·결정을 루브릭에 비추어 피드백합니다.",
     "입력의 sim.flags 는 조가 스스로 발견해야 할 함정입니다. 플래그 이름이나 정답을 직접 말하지 말고, 스스로 떠올리게 하는 질문(nudge_questions)으로 유도하세요.",
     input.revealed ? "revealed=true: 입력의 original(원문 비교 해설)과 비교해 vs_original 에 원문과의 차이를 간단히 쓰세요. 이때는 함정 이름을 직접 말해도 됩니다." : "revealed=false: vs_original 은 반드시 빈 문자열(\"\")로 두세요.",
+    "revealed=false 일 때 score 는 설계·근거의 논리와 완성도만 보고 매기세요. 시뮬레이션 플래그 수나 decision_checks 의 판정 결과로 점수를 깎거나 올리면 정답이 점수로 드러납니다.",
     "입력의 decision_checks 는 조가 고른 결정을 실제 결과로 판정한 것(correct/partial/wrong)과 이론 근거입니다. 결정의 정오는 이 판정을 따르고 새 기준을 만들지 마세요. revealed=false 면 판정이나 정답 선택지를 직접 말하지 말고, 근거가 되는 숫자를 스스로 다시 보게 하는 질문으로 유도하세요.",
     COMMON,
     '출력 형식: {"score": 0-100 정수, "strengths": string[], "issues": string[], "nudge_questions": string[], "vs_original": string}',
@@ -122,7 +127,8 @@ export function mockTeamReview(input: TeamReviewInput): TeamReview {
   const flags = input.sim?.flags ?? [];
   const nudges = flags.map((f) => FLAG_NUDGES[f]).filter((x): x is string => !!x);
   return {
-    score: Math.max(30, 80 - flags.length * 10),
+    // 정답 공개 전에는 점수가 플래그 수를 드러내지 않도록 고정값을 쓴다
+    score: input.revealed ? Math.max(30, 80 - flags.length * 10) : 70,
     strengths: ["제출한 설계가 한 가지 가설에 집중되어 있어요. (샘플 피드백)"],
     issues: flags.length ? ["결과를 해석하기 전에 데이터가 믿을 만한지 한 번 더 점검해 보세요. (샘플 피드백)"] : [],
     nudge_questions: nudges.length ? nudges.slice(0, 3) : ["이 결과가 틀렸다면 가장 먼저 의심할 부분은 어디일까요?"],

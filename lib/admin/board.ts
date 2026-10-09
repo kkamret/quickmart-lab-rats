@@ -1,5 +1,6 @@
 /** DB 행 → 강사 보드 데이터 (순수 함수). sim_runs.result 는 flags 를 포함한 원본 Readout 이다. */
 import type { Flag } from "../sim/core/flags";
+import { isNewer } from "../sim/time";
 import type { Readout } from "../sim/core/readout";
 import type { BoardComparison, BoardData, BoardRow, BoardTeam, FlagBoardRow } from "./types";
 
@@ -26,7 +27,7 @@ function latestMainRuns(runs: SimRunRow[]): SimRunRow[] {
     if ((r.design as { aa?: boolean }).aa) continue;
     const k = `${r.team_id}|${r.phase}`;
     const cur = best.get(k);
-    if (!cur || r.created_at > cur.created_at) best.set(k, r);
+    if (!cur || isNewer(r.created_at, cur.created_at)) best.set(k, r);
   }
   return [...best.values()];
 }

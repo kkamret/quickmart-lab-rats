@@ -17,6 +17,7 @@ export function BaeminDiagnosePanel() {
       </Card>
       <Card className="!p-4">
         <h4 className="mb-2 text-sm font-semibold">고객 유형별 퍼널</h4>
+        <div className="overflow-x-auto">
         <table className="w-full min-w-[420px] text-sm">
           <thead>
             <tr className="text-left text-xs text-ink3">
@@ -35,9 +36,11 @@ export function BaeminDiagnosePanel() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
       <Card className="!p-4">
         <h4 className="mb-2 text-sm font-semibold">장바구니를 다시 열어본 횟수별 주문 비율</h4>
+        <div className="overflow-x-auto">
         <table className="w-full min-w-[360px] text-sm">
           <thead><tr className="text-left text-xs text-ink3"><th className="py-1 font-medium">재방문 횟수</th><th className="py-1 text-right font-medium">사용자 비중</th><th className="py-1 text-right font-medium">주문 비율</th></tr></thead>
           <tbody>
@@ -50,6 +53,7 @@ export function BaeminDiagnosePanel() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
       <p className="text-xs text-ink3">모든 수치는 교육용 가상 데이터예요. 출처: 우아한형제들 기술블로그 「최소주문금액바 4번의 A/B실험」을 각색한 가상 시나리오.</p>
     </div>

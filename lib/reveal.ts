@@ -1,6 +1,7 @@
 /** 정답 공개 이후 조에게 내려가는 정보를 만든다 (순수 함수). 공개 전에는 이 함수의 결과를 API 가 내려보내지 않는다(규칙 3). */
 import type { CasePlugin, Verdict } from "./cases/types";
 import { simPhaseOf } from "./lab/phase";
+import { isNewer } from "./sim/time";
 import { FLAG_LABELS, type Flag } from "./sim/core/flags";
 import type { Readout } from "./sim/core/readout";
 
@@ -12,7 +13,7 @@ export function latestRunPerPhase(runs: RunRow[], teamId: string): Map<string, R
   for (const r of runs) {
     if (r.team_id !== teamId || (r.design as { aa?: boolean }).aa) continue;
     const cur = best.get(r.phase);
-    if (!cur || r.created_at > cur.created_at) best.set(r.phase, r);
+    if (!cur || isNewer(r.created_at, cur.created_at)) best.set(r.phase, r);
   }
   return best;
 }
