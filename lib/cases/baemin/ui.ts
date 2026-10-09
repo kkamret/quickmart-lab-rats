@@ -5,6 +5,7 @@ import { decisions } from "./decisions";
 import { defaultDesign } from "./defaults";
 import { formMeta } from "./formMeta";
 import { diagnoseSchema, p1Schema, p2Schema, p3Schema, p4Schema } from "./schema";
+import { attachDecisionWhy, attachPhaseIntro, attachWhy, STEP_INTRO } from "./why";
 
 export const phases: PhaseDef[] = [
   { key: "diagnose", step: "s1_diagnose", title: "이탈 퍼널 진단", kind: "diagnose" },
@@ -41,9 +42,10 @@ export const baeminMeta = {
 export const baeminClient: ClientCase = {
   key: "baemin",
   meta: baeminMeta,
-  phases,
+  phases: attachPhaseIntro(phases),
   designSchema: { diagnose: diagnoseSchema, p1: p1Schema, p2: p2Schema, p3: p3Schema, p4: p4Schema },
-  formMeta,
-  decisions,
+  formMeta: attachWhy(formMeta),
+  decisions: attachDecisionWhy(decisions),
+  stepIntro: STEP_INTRO,
   defaultDesign,
 };
