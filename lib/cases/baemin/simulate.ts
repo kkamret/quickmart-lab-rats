@@ -4,7 +4,7 @@
  */
 import { SimulationRejected } from "../types";
 import {
-  binomialCount, combineStrata, crnZ, designHash, groupMean, meanTest, obfBoundary, powerMean, powerProp, propTest, sigFlags, srm,
+  binomialCount, combineStrata, crnZ, designHash, groupMean, meanTest, normCdf, normInv, obfBoundary, propTest, sigFlags, srm,
   ssMean, ssProp,
   type Arm, type Comparison, type Flag, type MetricResult, type PeriodRow, type Readout,
 } from "@/lib/sim/core";
@@ -459,9 +459,8 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   if (withTruth) {
     const t0 = generate(d, { ...o, noise: false });
     const tAgg = (arm: Arm, days: number[]) => sumDays(t0.daily[`${arm}|all`], days);
-    const A = tAgg("A", win);
-    const sA = statOf(primary, A);
-    const dailyUsers = tAgg("A", included).users / included.length;
+    // 그룹당 하루 사용자 수: 모든 그룹의 사용자를 합쳐 그룹 수로 나눈다(계획은 균등 배정을 가정한다)
+    const dailyUsersPerArm = arms.reduce((s, a) => s + tAgg(a, included).users, 0) / included.length / arms.length;
     // 계획 표본: 메인 지표 기준 (비율은 절대 %p, 금액·시간 지표는 상대 %)
     const fullA = statOf(primary, tAgg("A", included));
     const perUser = fullA.n / tAgg("A", included).users;
@@ -477,35 +476,45 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
       nDenom = ssMean(fullA.sd ?? 1, mdeAbs, alpha, d.power);
     }
     const nUsers = Math.ceil(nDenom / perUser);
-    // 일평균 그룹당 사용자 수 기준 일수
-    const perArmPerDay = dailyUsers / arms.length;
-    planned = { nPerArm: nUsers, days: Math.ceil(nUsers / perArmPerDay) };
+    planned = { nPerArm: nUsers, days: Math.ceil(nUsers / dailyUsersPerArm) };
+
+    // 진짜 효과: 기댓값 경로의 차이. 층이 둘 이상이면(배정 비율이 바뀐 램프 10_week1_50_week2) 전 기간을 합친 차이는
+    // 심슨 왜곡을 담으므로, 층별 차이를 층의 사용자 수(모든 그룹 합) 가중 평균으로 합친다. 분석 방식(pooled/stratified)과는 상관없다.
+    // 사용자 수 가중은 "분석 구간에 들어온 사용자 전체에 대한 평균 효과"라서, 층이 하나일 때의 합산 차이와 같은 뜻이다.
+    const rawDiff = (m: MetricKey, a: Agg, b: Agg) => {
+      const sa = statOf(m, a);
+      const sb = statOf(m, b);
+      return METRICS[m].type === "prop" ? (sb.x ?? 0) / sb.n - (sa.x ?? 0) / sa.n : (sb.mean ?? 0) - (sa.mean ?? 0);
+    };
+    const trueDiff = (m: MetricKey, arm: Arm) => {
+      if (strata.length <= 1) return rawDiff(m, tAgg("A", win), tAgg(arm, win));
+      let wSum = 0;
+      let dSum = 0;
+      for (const days of strata) {
+        const w = arms.reduce((s, a) => s + tAgg(a, days).users, 0);
+        wSum += w;
+        dSum += w * rawDiff(m, tAgg("A", days), tAgg(arm, days));
+      }
+      return dSum / wSum;
+    };
 
     // 달성 검정력: 진짜 효과 기준. 진짜 효과가 0 이면 팀이 정한 MDE 기준.
-    const sB = statOf(primary, tAgg(treat[0], win));
-    let dTrue = METRICS[primary].type === "prop" ? (sB.x ?? 0) / sB.n - (sA.x ?? 0) / sA.n : (sB.mean ?? 0) - (sA.mean ?? 0);
+    // 표준오차는 분석이 실제로 쓰는 것과 같게 계산한다(그룹별 실제 사용자 수, 층화 여부, 단위 SE 배수 seScale).
+    const seParts = (useStrata ? strata : [win]).flatMap((days) => {
+      const sa = statOf(primary, tAgg("A", days));
+      const sb = statOf(primary, tAgg(treat[0], days));
+      return sa.n === 0 || sb.n === 0 ? [] : [compare(primary, sa, sb, alpha, seScale)];
+    });
+    const seAnalysis = seParts.length ? combineStrata(seParts, alpha).se : Infinity;
+    let dTrue = trueDiff(primary, treat[0]);
     // 기댓값 경로도 정수 반올림 때문에 0 이 정확히 0 이 아니므로, 표준오차의 2% 미만이면 효과 없음으로 본다
-    const seDiff = METRICS[primary].type === "prop"
-      ? Math.sqrt((2 * ((sA.x ?? 0) / sA.n) * (1 - (sA.x ?? 0) / sA.n)) / sA.n)
-      : Math.sqrt((2 * (sA.sd ?? 1) ** 2) / sA.n);
-    if (Math.abs(dTrue) < 0.02 * seDiff) dTrue = mdeAbs;
-    achievedPower = METRICS[primary].type === "prop" ? powerProp((sA.x ?? 0) / sA.n, dTrue, sA.n, alpha) : powerMean(sA.sd ?? 1, dTrue, sA.n, alpha);
+    if (Math.abs(dTrue) < 0.02 * seAnalysis) dTrue = mdeAbs;
+    achievedPower = normCdf(Math.abs(dTrue) / seAnalysis - normInv(1 - alpha / 2));
 
     // 강사 전용: 진짜 효과 (패널 키 "_" 로 시작 → toTeamView 가 제거)
     truth = {
-      note: "기댓값 경로(노이즈 없음)에서 계산한 B/C - A 의 진짜 차이. 조 화면에 보내지 않는다.",
-      effects: Object.fromEntries(
-        metricList.map((m) => [
-          m.key,
-          Object.fromEntries(
-            treat.map((arm) => {
-              const sa = statOf(m.key, A);
-              const sb = statOf(m.key, tAgg(arm, win));
-              return [arm, METRICS[m.key].type === "prop" ? (sb.x ?? 0) / sb.n - (sa.x ?? 0) / sa.n : (sb.mean ?? 0) - (sa.mean ?? 0)];
-            }),
-          ),
-        ]),
-      ),
+      note: "기댓값 경로(노이즈 없음)에서 계산한 B/C - A 의 진짜 차이. 배정 비율이 바뀐 램프는 층별 차이를 사용자 수로 가중 평균했다. 조 화면에 보내지 않는다.",
+      effects: Object.fromEntries(metricList.map((m) => [m.key, Object.fromEntries(treat.map((arm) => [arm, trueDiff(m.key, arm)]))])),
     };
   }
   if (truth) panels._truth = truth;

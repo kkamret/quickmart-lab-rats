@@ -280,6 +280,39 @@ describe("규칙 3: 숨긴 효과와 플래그는 조 화면으로 내려보내�
     expect(team).not.toContain("noveltyAmp");
   });
 
+  it("배정 비율이 바뀌는 램프(10_week1_50_week2)의 진짜 효과는 층별 차이를 합친 값이라 심슨 왜곡이 없다", () => {
+    const truthOf = (r: Readout) => (r.panels._truth as { effects: Record<string, Record<string, number>> }).effects;
+    const pooled = truthOf(simulateBaemin(p1({ ramp: "10_week1_50_week2", analysis_mode: "pooled" })));
+    const strat = truthOf(simulateBaemin(p1({ ramp: "10_week1_50_week2", analysis_mode: "stratified" })));
+    // 진짜 효과는 분석 방식과 상관없다
+    expect(strat).toEqual(pooled);
+    // 정상 상태 -2.5%p + 14일 평균 신규성 ≈ -3.1%p. 합산 차이(심슨 왜곡, 약 -5.5%p)가 아니다
+    expect(pooled.abandon.B).toBeLessThan(-0.028);
+    expect(pooled.abandon.B).toBeGreaterThan(-0.035);
+    // 배정 비율이 일정한 램프(none)는 그대로 합산 차이
+    const none = truthOf(simulateBaemin(p1()));
+    expect(none.abandon.B).toBeCloseTo(-0.031423, 5);
+  });
+
+  it("달성 검정력은 층별로 합친 진짜 효과와 분석이 쓰는 표준오차(단위 SE 배수 포함)로 계산한다", () => {
+    // 램프 10_week1_50_week2 + P2: 합산 진짜 효과(심슨 왜곡)가 아니라 층별 진짜 효과를 쓴다
+    const p2r = simulateBaemin(p2({ ramp: "10_week1_50_week2", analysis_mode: "stratified" }));
+    const eff = (p2r.panels._truth as { effects: Record<string, Record<string, number>> }).effects;
+    expect(eff.abandon.B).toBeGreaterThan(-0.03);
+    expect(Math.abs(eff.gmv.B)).toBeLessThan(100);
+    // 페이지뷰 단위는 분석이 SE 를 1/2 로 과소 계산하므로, 같은 SE 로 잰 검정력도 사용자 단위 SE 기준(0.799)보다 높다
+    const pv = simulateBaemin(p1({ unit: "pageview" }));
+    expect(pv.achievedPower!).toBeGreaterThan(0.95);
+    expect(pv.flags).not.toContain("UNDERPOWERED");
+  });
+
+  it("계획 기간은 그룹당 하루 사용자 수로 계산한다", () => {
+    const r = simulateBaemin(p1());
+    const perArmPerDay = r.srm!.counts[0] / 14;
+    // 그룹당 하루 약 8,800명 → 그룹당 49,005명은 약 6일 (예전 구현은 그룹당 사용자를 한 번 더 그룹 수로 나눠 약 12일로 두 배였다)
+    expect(Math.abs(r.planned!.days - r.planned!.nPerArm / perArmPerDay)).toBeLessThan(1.5);
+  });
+
   it("진짜 효과(_truth)는 방향이 맞다", () => {
     const r = simulateBaemin(p1());
     const eff = (r.panels._truth as { effects: Record<string, Record<string, number>> }).effects;
