@@ -192,7 +192,13 @@ function stateOf(phase: string, readout: Readout, design: Design, arm: string): 
     case "good_big":
       if (risks.length) return { arm, state: "deploy_risk", text: `${p.text}${riskText} ${cite("decision")}` };
       if (stoppedAt <= 7) {
-        return { arm, state: "deploy_novelty", text: `${p.text} 하지만 분석 구간이 ${stoppedAt}일로 첫 주에 그쳐서 신기효과가 섞였을 수 있어요. ${cite("duration", "novelty")}` };
+        // 중간 확인 규칙(peek_stop·sequential)으로 계획 기간보다 일찍 멈췄다면 그 이유를 함께 말한다.
+        // 표본이 큰 설계에서는 순차 검정도 첫 주 안에 경계를 넘기 쉬워서, 규칙을 잘 골랐어도 멈춘 날을 확인해야 한다.
+        const early = design.stopping !== "fixed" && stoppedAt < design.duration_days;
+        const why = !early
+          ? `분석 구간이 ${stoppedAt}일로 첫 주에 그쳐서`
+          : `${design.stopping === "sequential" ? "순차 검정 경계를 넘어" : "매일 확인하다 유의해져"} ${stoppedAt}일째에 일찍 멈췄어요. 그래서 분석 구간이 첫 주에 그쳐`;
+        return { arm, state: "deploy_novelty", text: `${p.text} 하지만 ${why} 신기효과가 섞였을 수 있어요. ${cite("duration", "novelty")}` };
       }
       return { arm, state: "deploy_clean", text: `${p.text} 가드레일에도 이상이 없어요. ${cite("decision")}` };
     case "good_small":

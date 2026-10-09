@@ -73,6 +73,18 @@ describe("judgeBaemin: 분류", () => {
     expect(judge(base({ duration_days: 7 }), r, "extend_rerun").reason).toContain("신기효과");
   });
 
+  it("중간 확인 규칙으로 첫 주 안에 일찍 멈췄으면 판정은 같고, 근거에 멈춘 이유와 날짜가 들어간다", () => {
+    const r = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.039, [-0.05, -0.028], true)])], { stoppedAt: 3 });
+    const seq = base({ stopping: "sequential" });
+    expect(verdicts(seq, r, P1_OPTS)).toEqual({ deploy: "partial", no_deploy: "wrong", extend_rerun: "correct" });
+    expect(judge(seq, r, "deploy").reason).toContain("순차 검정 경계를 넘어 3일째에 일찍 멈췄어요");
+    const peek = base({ stopping: "peek_stop" });
+    expect(judge(peek, r, "deploy").reason).toContain("매일 확인하다 유의해져 3일째에 일찍 멈췄어요");
+    // 계획한 기간(7일)을 다 채운 fixed 설계에는 조기 종료 문구가 없다
+    const r7 = readout([prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.03, [-0.04, -0.02], true)])], { stoppedAt: 7 });
+    expect(judge(base({ duration_days: 7 }), r7, "deploy").reason).not.toContain("일찍 멈췄어요");
+  });
+
   it("시스템 가드레일(크래시)이 유의하게 나빠짐: 중단 후 원인을 고쳐 재실험", () => {
     const r = readout([
       prop("abandon", "장바구니 이탈률", "P", [cmpOf("B", -0.03, [-0.04, -0.02], true)]),
@@ -148,6 +160,14 @@ describe("judgeBaemin: 실제 시뮬레이터 결과", () => {
   it("P1 14일: 배포가 정답, 7일: 기간 연장 재실험이 정답", () => {
     expect(pick(base(), P1_OPTS)).toEqual({ deploy: "correct", no_deploy: "wrong", extend_rerun: "partial" });
     expect(pick(base({ duration_days: 7 }), P1_OPTS)).toEqual({ deploy: "partial", no_deploy: "wrong", extend_rerun: "correct" });
+  });
+
+  it("P1 순차 검정: 표본이 커서 첫 주 안에 멈추므로 기간 연장 재실험이 정답이고, 근거에 조기 종료가 보인다", () => {
+    const d = base({ stopping: "sequential" });
+    expect(pick(d, P1_OPTS)).toEqual({ deploy: "partial", no_deploy: "wrong", extend_rerun: "correct" });
+    const rr = run(d);
+    expect(rr.result.stoppedAt!).toBeLessThanOrEqual(7);
+    expect(judgeBaemin("p1", "deploy", rr)!.reason).toContain(`순차 검정 경계를 넘어 ${rr.result.stoppedAt}일째에 일찍 멈췄어요`);
   });
 
   it("P2 노출 기준·램프업 없음(SRM): 배포 안 함이 정답", () => {
