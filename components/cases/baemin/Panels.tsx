@@ -5,7 +5,7 @@ import { METRIC_LABELS } from "@/lib/cases/baemin/formMeta";
 
 type Stat = { n: number; x?: number; mean?: number; sd?: number };
 /** 두 그룹 비교 한 칸. arms 에 있는 그룹(A, B, C…)은 모두 보여주고, 차이·p 는 B − A 만 있다. */
-type Cmp = { arms: Partial<Record<string, Stat>>; d?: number; ci?: [number, number]; rel?: number; p?: number; significant?: boolean };
+type Cmp = { arm?: string; arms: Partial<Record<string, Stat>>; d?: number; ci?: [number, number]; rel?: number; p?: number; significant?: boolean };
 type M = { key: string; type: "prop" | "mean"; unit: string };
 
 const TYPE_LABEL: Record<string, string> = { general: "일반", first_order: "첫 주문 혜택", member: "멤버십" };
@@ -25,21 +25,25 @@ function Section({ title, hint, open, children }: { title: string; hint?: string
   );
 }
 
-/** 칸 안에서 보여줄 그룹 순서 (있는 것만) */
-const armsOf = (c: Cmp) => (["A", "B", "C", "D"] as const).filter((a) => c.arms[a]);
-const arrow = (c?: Cmp) => (c ? armsOf(c).join(" → ") : "A → B");
+/** 처치군 키: cmp.arm 이 있으면 그것, 없으면 A 가 아닌 첫 그룹 */
+const armOf = (c: Cmp) => c.arm ?? (["B", "C", "D"] as const).find((a) => c.arms[a]) ?? "B";
+/** 비교 목록에서 "A → B → C" 같은 표기 */
+const arrow = (cs?: Cmp[]) => (cs?.length ? ["A", ...cs.map(armOf)].join(" → ") : "A → B");
 
-function CmpCell({ m, c }: { m: M; c?: Cmp }) {
-  if (!c) return <td className="px-2 py-2 text-right text-ink3">–</td>;
+/** 한 칸: 처치군이 여럿이면 A 값 → B 값 → C 값을 한 줄에, 차이·p 는 처치군마다 한 줄씩 */
+function CmpCell({ m, cs }: { m: M; cs: Cmp[] }) {
+  if (cs.length === 0) return <td className="px-2 py-2 text-right text-ink3">–</td>;
+  const multi = cs.length > 1;
   return (
     <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums">
-      <div className="text-xs text-ink3">{armsOf(c).map((a) => fmtValue(m, c.arms[a], m.unit)).join(" → ")}</div>
-      {c.d !== undefined && (
-        <div>
+      <div className="text-xs text-ink3">{[fmtValue(m, cs[0].arms.A, m.unit), ...cs.map((c) => fmtValue(m, c.arms[armOf(c)], m.unit))].join(" → ")}</div>
+      {cs.map((c) => c.d !== undefined && (
+        <div key={armOf(c)}>
+          {multi && <span className="mr-1 text-xs text-ink3">{armOf(c)}−A</span>}
           <b>{fmtDiff(m, c.d, m.unit)}</b> <span className="text-xs text-ink3">{fmtPText(c.p ?? 1)}</span>{" "}
           {c.significant && <Badge tone="run">유의</Badge>}
         </div>
-      )}
+      ))}
     </td>
   );
 }
@@ -49,20 +53,28 @@ const thLeft = "px-2 py-2 text-left text-xs font-medium text-ink3";
 
 /** 배민 사례 전용 패널: 주차별, 고객 유형별, OS별 사용자 수, 트리거 비교 (phase 별로 있는 것만 렌더링) */
 export function BaeminPanels({ phase, panels, primary }: { phase: string; panels: Record<string, unknown>; primary?: string }) {
-  const weekly = panels.weekly as ({ week: number; bShare: number; [k: string]: unknown })[] | undefined;
+  type WeekRow = { week: number; bShare: number; shares?: Record<string, number>; byArm?: Record<string, Record<string, Cmp>>; [k: string]: unknown };
+  const weekly = panels.weekly as WeekRow[] | undefined;
   const segments = panels.segments as Record<string, Record<string, Cmp>> | undefined;
+  const segmentsByArm = panels.segmentsByArm as Record<string, Record<string, Record<string, Cmp>>> | undefined;
   const byOs = panels.byOs as Record<string, Record<string, { users: number; crash: number }>> | undefined;
   const trigger = panels.trigger as { biased?: { conv: Cmp; aov: Cmp }; counterfactual?: { conv: Cmp; aov: Cmp; n: { A: number; B: number } } } | undefined;
   const sim = phase.slice(0, 2);
 
   // 주차별 표는 학생이 고른 Primary 를 따라간다(그 지표가 패널에 없으면 주문전환율)
   const weeklyKey = primary && weekly?.[0]?.[primary] ? primary : "conv";
-  const weeklyArrow = arrow(weekly?.[0]?.[weeklyKey] as Cmp | undefined);
+  /** 주차 한 줄의 처치군별 비교(byArm 이 없으면 최상위 값 하나) */
+  const weekCmps = (w: WeekRow): Cmp[] => (w.byArm ? Object.values(w.byArm).map((r) => r[weeklyKey]).filter(Boolean) : w[weeklyKey] ? [w[weeklyKey] as Cmp] : []);
+  const weeklyArrow = arrow(weekly?.[0] ? weekCmps(weekly[0]) : undefined);
 
   // 해당 OS 사용자가 하나도 없으면(예: 안드로이드만 실험) 그 행은 숨긴다
   const osRows = byOs ? Object.entries(byOs).filter(([, arms]) => Object.values(arms).some((g) => g.users > 0)) : [];
   const segKeys = segments ? Object.keys(Object.values(segments)[0] ?? {}) : [];
-  const segArrow = arrow(segments ? (Object.values(Object.values(segments)[0] ?? {})[0] as Cmp | undefined) : undefined);
+  /** 고객 유형·지표 한 칸의 처치군별 비교 */
+  const segCmps = (type: string, k: string): Cmp[] =>
+    segmentsByArm ? Object.values(segmentsByArm).map((s) => s[type]?.[k]).filter(Boolean) : segments?.[type]?.[k] ? [segments[type][k]] : [];
+  const firstType = segments ? Object.keys(segments)[0] : undefined;
+  const segArrow = arrow(firstType ? segCmps(firstType, segKeys[0]) : undefined);
 
   return (
     <div className="space-y-3">
@@ -74,15 +86,15 @@ export function BaeminPanels({ phase, panels, primary }: { phase: string; panels
               {trigger.counterfactual && (
                 <tr className="border-t border-line">
                   <td className="px-2 py-2">A에서 같은 조건을 채웠을 사용자 → B에서 문구를 본 사용자 <span className="text-xs text-ink3">({fmtInt(trigger.counterfactual.n.A)}명 · {fmtInt(trigger.counterfactual.n.B)}명)</span></td>
-                  <CmpCell m={metricOf("conv")} c={trigger.counterfactual.conv} />
-                  <CmpCell m={metricOf("aov")} c={trigger.counterfactual.aov} />
+                  <CmpCell m={metricOf("conv")} cs={[trigger.counterfactual.conv]} />
+                  <CmpCell m={metricOf("aov")} cs={[trigger.counterfactual.aov]} />
                 </tr>
               )}
               {trigger.biased && (
                 <tr className="border-t border-line">
                   <td className="px-2 py-2">B에서 문구를 못 본 사용자 → B에서 문구를 본 사용자</td>
-                  <CmpCell m={metricOf("conv")} c={trigger.biased.conv} />
-                  <CmpCell m={metricOf("aov")} c={trigger.biased.aov} />
+                  <CmpCell m={metricOf("conv")} cs={[trigger.biased.conv]} />
+                  <CmpCell m={metricOf("aov")} cs={[trigger.biased.aov]} />
                 </tr>
               )}
             </tbody>
@@ -98,7 +110,7 @@ export function BaeminPanels({ phase, panels, primary }: { phase: string; panels
               {Object.entries(segments).map(([type, ms]) => (
                 <tr key={type} className="border-t border-line">
                   <td className="px-2 py-2 font-medium">{TYPE_LABEL[type] ?? type}</td>
-                  {segKeys.map((k) => <CmpCell key={k} m={metricOf(k)} c={ms[k]} />)}
+                  {segKeys.map((k) => <CmpCell key={k} m={metricOf(k)} cs={segCmps(type, k)} />)}
                 </tr>
               ))}
             </tbody>
@@ -132,13 +144,13 @@ export function BaeminPanels({ phase, panels, primary }: { phase: string; panels
       {weekly && weekly.length > 1 && (
         <Section title="주차별 결과" hint={`실험 기간을 1주 단위로 나눠서 본 ${labelOf(weeklyKey)}이에요. (${weeklyArrow})`}>
           <table className="w-full min-w-[480px] text-sm">
-            <thead><tr><th className={thLeft}>주차</th><th className={th}>B 배정 비중</th><th className={th}>{labelOf(weeklyKey)}</th></tr></thead>
+            <thead><tr><th className={thLeft}>주차</th><th className={th}>{weekly[0].shares && Object.keys(weekly[0].shares).length > 1 ? "처치군 배정 비중" : `${Object.keys(weekly[0].shares ?? { B: 1 })[0]} 배정 비중`}</th><th className={th}>{labelOf(weeklyKey)}</th></tr></thead>
             <tbody>
               {weekly.map((w) => (
                 <tr key={w.week} className="border-t border-line">
                   <td className="px-2 py-2 font-medium">{w.week}주차</td>
-                  <td className="px-2 py-2 text-right tabular-nums">{(w.bShare * 100).toFixed(0)}%</td>
-                  <CmpCell m={metricOf(weeklyKey)} c={w[weeklyKey] as Cmp | undefined} />
+                  <td className="px-2 py-2 text-right tabular-nums">{w.shares ? Object.entries(w.shares).map(([a, v]) => `${a} ${(v * 100).toFixed(0)}%`).join(" · ") : `${(w.bShare * 100).toFixed(0)}%`}</td>
+                  <CmpCell m={metricOf(weeklyKey)} cs={weekCmps(w)} />
                 </tr>
               ))}
             </tbody>
