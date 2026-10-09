@@ -310,8 +310,9 @@ describe("규칙 3: 숨긴 효과와 플래그는 조 화면으로 내려보내�
   it("계획 기간은 그룹당 하루 사용자 수로 계산한다", () => {
     const r = simulateBaemin(p1());
     const perArmPerDay = r.srm!.counts[0] / 14;
-    // 그룹당 하루 약 8,800명 → 그룹당 49,005명은 약 6일 (예전 구현은 그룹당 사용자를 한 번 더 그룹 수로 나눠 약 12일로 두 배였다)
-    expect(Math.abs(r.planned!.days - r.planned!.nPerArm / perArmPerDay)).toBeLessThan(1.5);
+    // 그룹당 하루 약 8,800명 → 그룹당 49,005명은 약 6일이지만, 폼이 7일 미만을 받지 않으므로 7일로 안내한다
+    // (예전 구현은 그룹당 사용자를 한 번 더 그룹 수로 나눠 약 12일로 두 배였다)
+    expect(r.planned!.days).toBe(Math.max(7, Math.ceil(r.planned!.nPerArm / perArmPerDay)));
   });
 
   it("진짜 효과(_truth)는 방향이 맞다", () => {
@@ -541,5 +542,108 @@ describe("루브릭·정답 해설 문구", () => {
 
   it("P2 정답 해설은 iOS 구버전 에피소드를 램프업과 연결해 설명한다", () => {
     expect(baeminPlugin.reveal.p2).toContain("램프업");
+  });
+});
+
+describe("QA 보강: 그룹 구성·램프·보정·기간", () => {
+  const why = (r: Readout) => (r.panels._why ?? {}) as Record<string, string>;
+  type Cmp = { arm?: string; arms: Record<string, { n: number }>; d?: number };
+
+  it("P4 [A, C] + 주차 램프: SRM 이 NaN 이 아니고 C 그룹 사용자가 들어온다", () => {
+    const r = simulateBaemin(p4({ arms: ["A", "C"], ramp: "10_week1_50_week2", analysis_mode: "stratified" }));
+    expect(r.srm!.counts).toHaveLength(2);
+    expect(Number.isFinite(r.srm!.p)).toBe(true);
+    expect(r.srm!.p).toBeGreaterThan(0.001);
+    expect(r.srm!.counts.every((c) => c > 0)).toBe(true);
+    expect(r.metrics[0].comparisons.map((c) => c.arm)).toEqual(["C"]);
+  });
+
+  it("P4 [A, B, C] + 주차 램프: 처치군이 비율을 나눠 갖고(1주 5%·5%, 2주 25%·25%) SIMPSON_RISK 가 붙는다", () => {
+    const r = simulateBaemin(p4({ ramp: "10_week1_50_week2", analysis_mode: "pooled" }));
+    expect(r.flags).toContain("SIMPSON_RISK");
+    expect(r.flags).not.toContain("SRM");
+    // A 비율: (0.9·7 + 0.5·7)/14 = 0.7 (요일 가중이 있어 대략)
+    expect(r.srm!.ratios[0]).toBeGreaterThan(0.6);
+    expect(r.srm!.ratios[0]).toBeLessThan(0.8);
+    expect(r.srm!.ratios[1]).toBeCloseTo(r.srm!.ratios[2], 2);
+    const weekly = r.panels.weekly as { shares: Record<string, number> }[];
+    expect(weekly[0].shares.B).toBeCloseTo(0.05, 6);
+    expect(weekly[0].shares.C).toBeCloseTo(0.05, 6);
+    expect(weekly[1].shares.B).toBeCloseTo(0.25, 6);
+    // 층화하면 층이 둘이고 진짜 효과를 층별로 합친다
+    const st = simulateBaemin(p4({ ramp: "10_week1_50_week2", analysis_mode: "stratified" }));
+    expect(st.flags).not.toContain("SIMPSON_RISK");
+  });
+
+  it("P4 패널: [A, C] 는 C 로 채워지고, [A, B, C] 는 byArm 에 B·C 모두 있으며 Primary 도 들어 있다", () => {
+    const ac = simulateBaemin(p4({ arms: ["A", "C"], metrics: { primary: "aov", guardrails: ["conv"], secondary: [] } }));
+    const wAc = ac.panels.weekly as { bShare: number; conv: Cmp; aov: Cmp; byArm: Record<string, { aov: Cmp }> }[];
+    expect(wAc[0].bShare).toBeCloseTo(0.5, 6);
+    expect(wAc[0].conv.arm).toBe("C");
+    expect(wAc[0].conv.arms.C.n).toBeGreaterThan(0);
+    expect(Number.isFinite(wAc[0].aov.d!)).toBe(true);
+    const seg = ac.panels.segments as Record<string, Record<string, Cmp>>;
+    expect(seg.general.conv.arms.C.n).toBeGreaterThan(0);
+
+    const abc = simulateBaemin(p4({ metrics: { primary: "aov", guardrails: ["conv"], secondary: [] } }));
+    const wAbc = abc.panels.weekly as { byArm: Record<string, { conv: Cmp; aov: Cmp }> }[];
+    expect(Object.keys(wAbc[0].byArm)).toEqual(["B", "C"]);
+    expect(wAbc[0].byArm.C.aov.arms.C.n).toBeGreaterThan(0);
+    expect(wAbc[0].byArm.B.aov.arms.B.n).toBeGreaterThan(0);
+    const segBy = abc.panels.segmentsByArm as Record<string, Record<string, Record<string, Cmp>>>;
+    expect(Object.keys(segBy)).toEqual(["B", "C"]);
+    expect(segBy.C.general.aov.arms.C.n).toBeGreaterThan(0);
+  });
+
+  it("stopping=sequential 에 correction 을 켜면 경계가 실제로 더 엄격해지고, 라벨이 그대로 진실이다", () => {
+    const base = { stopping: "sequential" as const };
+    const none = simulateBaemin(p4({ ...base, correction: "none" }));
+    const bonf = simulateBaemin(p4({ ...base, correction: "bonferroni" }));
+    const labels = bonf.metrics.flatMap((m) => m.comparisons.map((c) => c.method));
+    expect(labels.every((l) => l.includes("순차(OBF)") && l.includes("Bonferroni"))).toBe(true);
+    const count = (r: Readout) => r.metrics.flatMap((m) => m.comparisons).filter((c) => c.significant).length;
+    expect(count(bonf)).toBeLessThanOrEqual(count(none));
+    // 보정이 정말 적용됐는지: 보정 없이는 유의하지만 보정하면 유의하지 않은 비교가 최소 하나 있는 설계를 쓴다
+    const many = (c: "none" | "bonferroni") => simulateBaemin(p4({ ...base, correction: c, stopping: "sequential", duration_days: 28, metrics: { primary: "conv", guardrails: ["abandon", "crash"], secondary: ["aov", "gmv", "repurchase7", "cs_rate", "near_min_share", "min_reach", "load_time"] } }));
+    const a = many("none");
+    const b = many("bonferroni");
+    expect(count(b)).toBeLessThanOrEqual(count(a));
+    // 대조: 순차 + correction none 의 판정은 이전과 같은 OBF 경계(보정 없음)
+    const z = (c: { d: number; ci: [number, number] }) => Math.abs(c.d) / ((c.ci[1] - c.ci[0]) / (2 * 1.959964));
+    for (const m of none.metrics) for (const c of m.comparisons) {
+      const bound = 1.959964 * Math.sqrt(14 / none.stoppedAt!);
+      if (Math.abs(z(c) - bound) > 0.02) expect(c.significant).toBe(z(c) >= bound);
+    }
+  });
+
+  it("계획 기간은 7일 미만으로 안내하지 않고, 필요 표본은 그대로다", () => {
+    for (const d of [p1(), p2(), p3(), p4()]) {
+      const r = simulateBaemin(d);
+      expect(r.planned!.days).toBeGreaterThanOrEqual(7);
+    }
+    expect(simulateBaemin(p1()).planned!.nPerArm).toBe(49005);
+  });
+
+  it("계획 기간은 가장 적게 들어오는 그룹 기준이라 램프에서는 길어진다", () => {
+    const flat = simulateBaemin(p1({ allocation: 0.05 }));
+    const ramp = simulateBaemin(p1({ allocation: 0.05, ramp: "10_week1_50_week2" }));
+    expect(Math.abs(ramp.planned!.nPerArm / flat.planned!.nPerArm - 1)).toBeLessThan(0.05);
+    expect(ramp.planned!.days).toBeGreaterThan(flat.planned!.days);
+  });
+
+  it("SHORT_DURATION 표본 부족은 가장 적은 그룹 기준: 대조군은 충분해도 처치군이 모자라면 붙는다", () => {
+    // allocation 을 낮춰 주차 램프에서 A 는 필요 표본을 넘지만 B 는 못 미치는 설계를 찾는다
+    let found = false;
+    for (const allocation of [0.3, 0.35, 0.4, 0.45, 0.5, 0.6]) {
+      const r = simulateBaemin(p1({ allocation, ramp: "10_week1_50_week2", analysis_mode: "stratified" }));
+      const [a, b] = r.srm!.counts;
+      if (a >= r.planned!.nPerArm && b < r.planned!.nPerArm) {
+        found = true;
+        expect(r.flags).toContain("SHORT_DURATION");
+        expect(why(r).SHORT_DURATION).toContain("필요 표본");
+        break;
+      }
+    }
+    expect(found).toBe(true);
   });
 });

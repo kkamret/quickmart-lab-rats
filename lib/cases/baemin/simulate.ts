@@ -73,11 +73,16 @@ function armsOf(d: Design): Arm[] {
   return ["A", "B"];
 }
 
-/** 일자별 계획 배정비. 10_week1_50_week2 는 B 가 1~7일 10%, 8일~ 50% (나머지는 A) */
+/**
+ * 일자별 계획 배정비. 10_week1_50_week2 는 처치군 전체가 1~7일 10%, 8일~ 50% (나머지는 A).
+ * 처치군이 둘(P4 의 A/B/C)이면 그 비율을 처치군끼리 똑같이 나눠 가진다(1주차 B 5%·C 5%, 2주차 B 25%·C 25%).
+ * 그룹 구성은 설계의 arms 에서 오므로 [A, C] 같은 조합도 그대로 따른다.
+ */
 function armShares(d: Design, arms: Arm[], day: number): Record<string, number> {
-  if (d.ramp === "10_week1_50_week2" && arms.length === 2) {
-    const b = day <= 7 ? 0.1 : 0.5;
-    return { A: 1 - b, B: b };
+  const treat = arms.filter((a) => a !== "A");
+  if (d.ramp === "10_week1_50_week2" && treat.length >= 1) {
+    const t = day <= 7 ? 0.1 : 0.5;
+    return { A: 1 - t, ...Object.fromEntries(treat.map((a) => [a, t / treat.length])) };
   }
   return Object.fromEntries(arms.map((a) => [a, 1 / arms.length]));
 }
@@ -367,8 +372,10 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   const correction = d.phase === "p4" ? d.correction : "none";
   let sig: boolean[];
   if (d.stopping === "sequential") {
-    const bound = obfBoundary(stopIdx + 1, K, alpha);
-    sig = pending.map((p) => Math.abs(p.r.z) >= bound);
+    // OBF 경계를 넘었는지는 z 를 sqrt(K/k) 로 줄인 값의 양측 p 가 α 보다 작은지와 같다.
+    // 그 p 에 다중검정 보정을 그대로 적용하면 Bonferroni 는 경계를 α/m 로 잡은 OBF 와 같아진다.
+    const shrink = Math.sqrt(K / (stopIdx + 1));
+    sig = sigFlags(pending.map((p) => 2 * (1 - normCdf(Math.abs(p.r.z) / shrink))), alpha, correction);
   } else {
     sig = sigFlags(pending.map((p) => p.r.p), alpha, correction);
   }
@@ -406,33 +413,43 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   }));
 
   // ── 패널(조 화면에 보이는 데이터) ──
-  const cmpPanel = (m: MetricKey, a: Agg, b: Agg) => {
+  // 처치군 하나와 대조군 A 의 비교. 그룹 키는 실제 처치군(B 또는 C)이고, `arm` 필드가 그 이름이다.
+  const cmpPanel = (m: MetricKey, a: Agg, b: Agg, arm: Arm = treat[0]) => {
     const sa = statOf(m, a);
     const sb = statOf(m, b);
-    if (sa.n === 0 || sb.n === 0) return { arms: { A: sa, B: sb } };
+    if (sa.n === 0 || sb.n === 0) return { arm, arms: { A: sa, [arm]: sb } };
     const r = compare(m, sa, sb, alpha, seScale);
-    return { arms: { A: sa, B: sb }, d: r.d, ci: r.ci, rel: r.rel, p: r.p, significant: r.p < alpha };
+    return { arm, arms: { A: sa, [arm]: sb }, d: r.d, ci: r.ci, rel: r.rel, p: r.p, significant: r.p < alpha };
   };
   const panels: Record<string, unknown> = {};
-  // 주차별(심슨의 역설 발견용)
+  // 주차별(심슨의 역설 발견용). 최상위 conv·[primary] 는 첫 처치군(B 또는 C)이고, 처치군이 여럿이면 byArm 에 그룹별로 모두 있다.
   const weeks = Math.ceil(stoppedDay / 7);
   panels.weekly = Array.from({ length: weeks }, (_, w) => {
     const days = allDaysToStop.filter((day) => Math.ceil(day / 7) === w + 1);
-    const bShare = days.length ? data.shares[days[0] - 1]["B"] : 0;
+    const shareOf = (arm: Arm) => (days.length ? data.shares[days[0] - 1][arm] ?? 0 : 0);
+    const rowOf = (arm: Arm) => ({
+      conv: cmpPanel("conv", armAgg("A", "all", days), armAgg(arm, "all", days), arm),
+      [primary]: cmpPanel(primary, armAgg("A", "all", days), armAgg(arm, "all", days), arm),
+    });
     return {
       week: w + 1,
-      bShare,
-      conv: cmpPanel("conv", armAgg("A", "all", days), armAgg("B", "all", days)),
-      [primary]: cmpPanel(primary, armAgg("A", "all", days), armAgg("B", "all", days)),
+      /** 첫 처치군의 배정 비율(필드 이름은 예전 B 전용 시절 그대로) */
+      bShare: shareOf(treat[0]),
+      shares: Object.fromEntries(treat.map((a) => [a, shareOf(a)])),
+      ...rowOf(treat[0]),
+      byArm: Object.fromEntries(treat.map((a) => [a, rowOf(a)])),
     };
   });
-  // 고객 유형별 세그먼트 표
-  panels.segments = Object.fromEntries(
-    TYPE_KEYS.map((t) => [
-      t,
-      Object.fromEntries((["abandon", "conv", "aov", "near_min_share"] as MetricKey[]).map((m) => [m, cmpPanel(m, armAgg("A", `type:${t}`), armAgg("B", `type:${t}`))])),
-    ]),
-  );
+  // 고객 유형별 세그먼트 표 (첫 처치군 기준, 처치군이 여럿이면 segmentsByArm 에 그룹별로)
+  const segmentsOf = (arm: Arm) =>
+    Object.fromEntries(
+      TYPE_KEYS.map((t) => [
+        t,
+        Object.fromEntries((["abandon", "conv", "aov", "near_min_share"] as MetricKey[]).map((m) => [m, cmpPanel(m, armAgg("A", `type:${t}`), armAgg(arm, `type:${t}`), arm)])),
+      ]),
+    );
+  panels.segments = segmentsOf(treat[0]);
+  if (treat.length > 1) panels.segmentsByArm = Object.fromEntries(treat.map((a) => [a, segmentsOf(a)]));
   // OS 별 사용자 수와 크래시 (SRM 원인 조사용 데이터)
   panels.byOs = Object.fromEntries(
     (["android", "ios_new", "ios_old"] as const).map((os) => [
@@ -459,8 +476,8 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   if (withTruth) {
     const t0 = generate(d, { ...o, noise: false });
     const tAgg = (arm: Arm, days: number[]) => sumDays(t0.daily[`${arm}|all`], days);
-    // 그룹당 하루 사용자 수: 모든 그룹의 사용자를 합쳐 그룹 수로 나눈다(계획은 균등 배정을 가정한다)
-    const dailyUsersPerArm = arms.reduce((s, a) => s + tAgg(a, included).users, 0) / included.length / arms.length;
+    // 그룹당 하루 사용자 수: 가장 적게 들어오는 그룹 기준이다(배정 비율이 바뀌는 램프에서는 처치군이 먼저 표본에 닿지 못한다)
+    const dailyUsersPerArm = Math.min(...arms.map((a) => tAgg(a, included).users)) / included.length;
     // 계획 표본: 메인 지표 기준 (비율은 절대 %p, 금액·시간 지표는 상대 %)
     const fullA = statOf(primary, tAgg("A", included));
     const perUser = fullA.n / tAgg("A", included).users;
@@ -476,7 +493,8 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
       nDenom = ssMean(fullA.sd ?? 1, mdeAbs, alpha, d.power);
     }
     const nUsers = Math.ceil(nDenom / perUser);
-    planned = { nPerArm: nUsers, days: Math.ceil(nUsers / dailyUsersPerArm) };
+    // 폼은 7일 미만을 받지 않으므로, 계산한 기간이 그보다 짧아도 7일(요일 주기 한 번)로 안내한다. 필요 표본은 그대로다.
+    planned = { nPerArm: nUsers, days: Math.max(7, Math.ceil(nUsers / dailyUsersPerArm)) };
 
     // 진짜 효과: 기댓값 경로의 차이. 층이 둘 이상이면(배정 비율이 바뀐 램프 10_week1_50_week2) 전 기간을 합친 차이는
     // 심슨 왜곡을 담으므로, 층별 차이를 층의 사용자 수(모든 그룹 합) 가중 평균으로 합친다. 분석 방식(pooled/stratified)과는 상관없다.
@@ -541,9 +559,10 @@ export function simulateBaemin(input: unknown, opts: SimOptions = {}): Readout {
   if (d.unit !== "user") raise("UNIT_MISMATCH");
 
   const shortReasons: string[] = [];
-  const analysedA = armAgg("A").users;
-  if (planned && analysedA < planned.nPerArm) {
-    shortReasons.push(`분석한 그룹당 사용자가 ${num(analysedA)}명으로, 설계한 α·검정력·MDE로 정한 필요 표본 ${num(planned.nPerArm)}명보다 적어요. ${label("alpha_power", "mde")}`);
+  // 가장 적은 그룹 기준: 배정 비율이 바뀌는 램프에서는 처치군이 필요 표본에 먼저 못 미친다
+  const analysedMin = Math.min(...arms.map((a) => armAgg(a).users));
+  if (planned && analysedMin < planned.nPerArm) {
+    shortReasons.push(`분석한 그룹 중 사용자가 가장 적은 그룹이 ${num(analysedMin)}명으로, 설계한 α·검정력·MDE로 정한 필요 표본 ${num(planned.nPerArm)}명보다 적어요. ${label("alpha_power", "mde")}`);
   }
   if (stopIdx === K - 1 && win.length % 7 !== 0) {
     shortReasons.push(`분석 구간 ${win.length}일이 요일 주기(7일)의 배수가 아니라 요일별 패턴이 한쪽으로 치우쳐요. ${label("duration")}`);
