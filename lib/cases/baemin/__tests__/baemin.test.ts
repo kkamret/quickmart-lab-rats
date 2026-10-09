@@ -7,6 +7,7 @@ import { SimulationRejected } from "../../types";
 import { ALL_FLAGS, toTeamView, type Readout } from "@/lib/sim/core";
 import { baeminPlugin, simulateBaemin, validateDesign } from "../index";
 import { SEED } from "../population";
+import { defaultDesign } from "../defaults";
 
 const hyp = { action: "가게홈에서 최소금액 달성 여부를 안내해요", behavior: "장바구니를 오가지 않고 바로 주문해요", impact: "장바구니 이탈률이 줄어요" };
 
@@ -345,6 +346,12 @@ describe("플러그인 인터페이스", () => {
     const sample = p4() as Record<string, unknown>;
     const has = (path: string) => path.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), sample) !== undefined;
     for (const f of baeminPlugin.formMeta.p4) expect(has(f.name), f.name).toBe(true);
+  });
+
+  it("P4 기본 설계는 문서(§0 B vs C)대로 A·B·C 세 그룹으로 시작한다", () => {
+    const d = defaultDesign("p4", p3()) as { arms: string[]; phase: string };
+    expect(d.phase).toBe("p4");
+    expect(d.arms).toEqual(["A", "B", "C"]);
   });
 
   it("plugin.simulate 는 p1_run 같은 키도 받고, 진단 단계는 거절한다", () => {
