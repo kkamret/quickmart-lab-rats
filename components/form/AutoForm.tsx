@@ -2,7 +2,7 @@
 import type { FieldMeta, FieldOption } from "@/lib/cases/types";
 import { getPath, setPath } from "@/lib/lab/path";
 import { FIELD_THEORY } from "@/lib/theory";
-import { inputClass, TheoryBadge } from "../ui";
+import { inputClass, TheoryBadge, WhyLine } from "../ui";
 
 type Obj = Record<string, unknown>;
 
@@ -30,12 +30,43 @@ function Field({ f, v, set, disabled }: { f: FieldMeta; v: unknown; set: (v: unk
         {FIELD_THEORY[f.name] && <TheoryBadge k={FIELD_THEORY[f.name]} />}
       </label>
       {f.help && <p className="mb-1.5 text-xs text-ink3">{f.help}</p>}
+      {f.why && <WhyLine why={f.why} lead="왜 묻나요" className="mb-1.5" />}
       <Control id={id} f={f} v={v} set={set} disabled={disabled} />
+      <OptionWhyList f={f} />
     </div>
   );
 }
 
 const same = (o: FieldOption, v: unknown) => o.value === v;
+
+const BOOLEAN_OPTIONS: FieldOption[] = [{ label: "예", value: true }, { label: "아니요", value: false }];
+/** boolean 은 사례가 options 를 주면 그 라벨을, 없으면 예/아니요를 쓴다 */
+const optionsOf = (f: FieldMeta): FieldOption[] => f.options ?? (f.type === "boolean" ? BOOLEAN_OPTIONS : []);
+
+/**
+ * 보기마다 "왜 있나요?" 접이식 목록. 고르기 전에 보기를 나란히 비교할 수 있게 label — desc 와 한 줄을 함께 보여 준다.
+ * why 가 있는 보기가 하나도 없으면 그리지 않는다(다른 사례 화면은 그대로).
+ */
+function OptionWhyList({ f }: { f: FieldMeta }) {
+  const opts = optionsOf(f);
+  if (!opts.some((o) => o.why)) return null;
+  return (
+    <details className="mt-1.5 rounded-lg border border-line px-3 py-2">
+      <summary className="cursor-pointer text-xs font-semibold text-ink2">선택지마다 왜 있나요?</summary>
+      <ul className="mt-2 space-y-2">
+        {opts.map((o) => (
+          <li key={String(o.value)}>
+            <span className="block text-xs font-semibold text-ink">
+              {o.label}
+              {o.desc && <span className="font-normal text-ink3"> — {o.desc}</span>}
+            </span>
+            {o.why && <WhyLine why={o.why} />}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 
 function Control({ id, f, v, set, disabled }: { id: string; f: FieldMeta; v: unknown; set: (v: unknown) => void; disabled?: boolean }) {
   switch (f.type) {
@@ -72,9 +103,9 @@ function Control({ id, f, v, set, disabled }: { id: string; f: FieldMeta; v: unk
     case "boolean":
       return (
         <div role="radiogroup" id={id} className="flex gap-2">
-          {[{ label: "예", value: true }, { label: "아니요", value: false }].map((o) => (
+          {optionsOf(f).map((o) => (
             <button
-              key={o.label} type="button" role="radio" aria-checked={v === o.value} disabled={disabled} onClick={() => set(o.value)}
+              key={String(o.value)} type="button" role="radio" aria-checked={v === o.value} disabled={disabled} onClick={() => set(o.value)}
               className={`rounded-lg border px-4 py-1.5 text-sm ${v === o.value ? "border-brand bg-brand-soft font-semibold text-ink" : "border-line bg-surface text-ink2 hover:bg-sunk"} disabled:opacity-60`}
             >
               {o.label}
