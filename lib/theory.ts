@@ -77,6 +77,18 @@ export const theoryNote = (k: TheoryKey): string | undefined => (THEORY[k] as Th
 /** "Ch2 · 가설 문장 구조" */
 export const theoryLabel = (k: TheoryKey) => `Ch${THEORY[k].chapter} · ${THEORY[k].title}`;
 
+/** 다리 문장의 개념 라벨: revealOnly 개념은 챕터만("Ch2"), 그 밖은 "Ch2 · 가설 문장 구조" */
+export const introTheoryLabel = (k: TheoryKey) => ("revealOnly" in THEORY[k] ? theoryChapterOnly(k) : theoryLabel(k));
+
+/** "왜 이 선택지?" 줄의 근거 배지: 챕터면 "Ch3", 사례 문서면 "사례". 개념 이름은 담지 않는다. */
+export const whyBadge = (src: TheoryChapter | "case") => (src === "case" ? "사례" : `Ch${src}`);
+
+/** 사례 근거 배지의 툴팁 */
+export const CASE_BADGE_TITLE = "사례 문서";
+
+/** 근거 배지 툴팁: 챕터는 NEUTRAL_BADGE_TITLE, 사례는 CASE_BADGE_TITLE (개념 이름 없음) */
+export const whyBadgeTitle = (src: TheoryChapter | "case") => (src === "case" ? CASE_BADGE_TITLE : NEUTRAL_BADGE_TITLE);
+
 /** 폼 입력란 이름 → 개념. 사례마다 formMeta 를 고치지 않고 AutoForm 이 이 표로 배지를 붙인다. */
 export const FIELD_THEORY: Record<string, TheoryKey> = {
   hypothesis: "hypothesis",
