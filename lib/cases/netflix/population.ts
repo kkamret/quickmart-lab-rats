@@ -7,7 +7,7 @@ export const DAILY_ACTIVE = 5_500_000;
 
 /**
  * 주간 시청 시간(시간/멤버): 0 질량 0.12 + 로그정규. 평균 6.5, SD 9.0 이 되도록 (mu, sigma) 를 풀었다.
- * 중앙값은 약 4.6 시간(스펙 4.5 근처), 주 60시간 이상 고래는 약 0.4%(스펙 0.3%).
+ * 로그정규 성분 중앙값은 약 4.6 시간(스펙 4.5 근처), 0 질량 포함 전체 중앙값은 약 3.9 시간, 주 60시간 이상 고래는 약 0.37%.
  */
 export const HOURS_MIX: LogNormalMixture = { zeroMass: 0.12, mu: 1.5285, sigma: 0.971 };
 export const HOURS_MEAN = 6.5;

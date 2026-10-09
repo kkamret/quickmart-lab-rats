@@ -4,7 +4,7 @@
  */
 import { SimulationRejected } from "../types";
 import {
-  compareDiff, crnZ, designHash, meanTest, powerMean, powerProp, propTest, sigFlags, srm, ssMean, ssProp,
+  compareDiff, crnZ, designHash, meanTest, normCdf, normInv, powerMean, powerProp, propTest, sigFlags, srm, ssMean, ssProp,
   type Comparison, type Flag, type MetricResult, type Readout,
 } from "@/lib/sim/core";
 import { HOURS_MEAN_EXACT, RAW_WEEK_SD, windowFactor, type SimOptions } from "./common";
@@ -18,6 +18,20 @@ const uniqueCands = (d: DesignP1) => unique(d.candidates) as Exclude<RankerId, "
 
 /** 보정을 고려한 계획용 유의수준 */
 const alphaEff = (correction: DesignP1["correction"], m: number) => (correction === "bonferroni" ? ALPHA / Math.max(1, m) : ALPHA);
+
+/**
+ * 인터리빙은 쌍마다 "후보 몫이 선택될 비율 vs 0.5" 를 한 표본 z 검정으로 본다(ilCompare). 계획 표본·달성 검정력도 같은 검정 기준이다.
+ * 귀무 SE 는 √(0.25/n), 대립 SE 는 √(p(1−p)/n).
+ */
+function ssPrefOneSample(p: number, alpha: number, power: number): number {
+  const za = normInv(1 - alpha / 2);
+  const zb = normInv(power);
+  return Math.ceil(Math.pow(za * 0.5 + zb * Math.sqrt(p * (1 - p)), 2) / Math.pow(p - 0.5, 2));
+}
+function powerPrefOneSample(p: number, n: number, alpha: number): number {
+  const za = normInv(1 - alpha / 2);
+  return normCdf((Math.abs(p - 0.5) - za * Math.sqrt(0.25 / n)) / Math.sqrt((p * (1 - p)) / n));
+}
 
 type IlRun = { id: Exclude<RankerId, "R0">; n: number; x: number; daily: number[]; dailyN: number[] };
 
@@ -77,8 +91,8 @@ function simulateInterleaving(d: DesignP1, opts: SimOptions): Readout {
   };
   const m = run.length;
   const aEff = alphaEff(d.correction, m);
-  const needed = ssProp(0.5, 0.52, aEff, PLAN_POWER);
-  const achievedPower = withTruth ? powerProp(0.5, 0.02, run[0].n, aEff) : undefined;
+  const needed = ssPrefOneSample(0.52, aEff, PLAN_POWER);
+  const achievedPower = withTruth ? powerPrefOneSample(0.52, run[0].n, aEff) : undefined;
 
   const flags: Flag[] = [];
   if (credit === "play_start") flags.push("GOODHART");
