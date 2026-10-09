@@ -1,7 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
 import { fmtInt, fmtP, fmtPct } from "@/components/readout/format";
-import { Button, Card, TheoryBadge, inputClass } from "@/components/ui";
+import { Button, Card, TheoryBadge, WhyLine, inputClass } from "@/components/ui";
+import type { Why } from "@/lib/cases/types";
+import { TRAP_LAB_WHY } from "@/lib/lab/lab-why";
 import { peekingExperiment, simpsonRows, srmCheck, type PeekingResult } from "@/lib/lab/trap-lab";
 
 /** s7 함정 연구소: 공통 화면. Readout 에서 스쳐 지나간 함정(Peeking, 심슨의 역설, SRM)을 직접 돌려본다. 브라우저에서만 계산한다. */
@@ -32,6 +34,16 @@ function Peeking() {
         </label>
         <Button onClick={() => setRes(peekingExperiment(days))}>A/A 실험 400번 돌리기</Button>
       </div>
+      <div className="mt-2 space-y-1">
+        <WhyLine why={TRAP_LAB_WHY.peekingDays} lead="실험 기간" />
+        <WhyLine why={TRAP_LAB_WHY.peekingRun} lead="A/A 실험 400번 돌리기" />
+      </div>
+      <details className="mt-1.5 rounded-lg border border-line px-3 py-2">
+        <summary className="cursor-pointer text-xs font-semibold text-ink2">선택지마다 왜 있나요?</summary>
+        <ul className="mt-2 space-y-1">
+          {([7, 14, 28] as const).map((d) => <li key={d}><WhyLine why={TRAP_LAB_WHY.peekingDayOptions[d]} lead={`${d}일`} /></li>)}
+        </ul>
+      </details>
       {res && (
         <div className="mt-4 space-y-3">
           <Bar label="마지막 날 한 번만 확인" value={res.finalRate} tone="bg-pos" />
@@ -88,6 +100,10 @@ function Simpson() {
         <Button variant={view === "pool" ? "primary" : "ghost"} onClick={() => setView("pool")}>전체 기간 합쳐 보기</Button>
         <Button variant={view === "split" ? "primary" : "ghost"} onClick={() => setView("split")}>기간별로 보기</Button>
       </div>
+      <div className="mt-2 space-y-1">
+        <WhyLine why={TRAP_LAB_WHY.simpsonPool} lead="전체 기간 합쳐 보기" />
+        <WhyLine why={TRAP_LAB_WHY.simpsonSplit} lead="기간별로 보기" />
+      </div>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[520px] text-sm">
           <thead>
@@ -126,11 +142,11 @@ function SrmCalc() {
   return (
     <Card>
       <h2 className="text-xl font-bold">SRM 계산기<TheoryBadge k="srm" reveal /></h2>
-      <p className="mt-1 text-sm text-ink2">설계한 배정 비율과 실제 사용자 수가 우연 이상으로 다른지 확인해요. 실무에서는 p &lt; 0.001이면 SRM으로 보고 결과 해석을 멈춰요.</p>
+      <p className="mt-1 text-sm text-ink2">설계한 배정 비율과 실제 사용자 수가 우연 이상으로 다른지 확인해요. 우연으로 보기 어려운 차이면 결과 해석을 멈추고 원인을 찾아요.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <Num label="A그룹 사용자 수" value={a} onChange={setA} />
-        <Num label="B그룹 사용자 수" value={b} onChange={setB} />
-        <Num label="설계한 A 비율 (%)" value={r} onChange={setR} />
+        <Num label="A그룹 사용자 수" value={a} onChange={setA} why={TRAP_LAB_WHY.srmA} />
+        <Num label="B그룹 사용자 수" value={b} onChange={setB} why={TRAP_LAB_WHY.srmB} />
+        <Num label="설계한 A 비율 (%)" value={r} onChange={setR} why={TRAP_LAB_WHY.srmRatio} />
       </div>
       {res.ok ? (
         <div className={`mt-3 rounded-lg p-3 text-sm ${res.srm ? "bg-neg-soft" : "bg-pos-soft"}`}>
@@ -145,11 +161,12 @@ function SrmCalc() {
   );
 }
 
-function Num({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Num({ label, value, onChange, why }: { label: string; value: string; onChange: (v: string) => void; why?: Why }) {
   return (
     <label className="block text-sm">
       <span className="mb-1 block text-xs font-semibold text-ink2">{label}</span>
       <input className={inputClass} type="number" value={value} onChange={(e) => onChange(e.target.value)} />
+      {why && <WhyLine why={why} className="mt-1" />}
     </label>
   );
 }
