@@ -9,10 +9,11 @@ export const ENTRY_RATE = 0.62;
 export const ENTRANTS_PER_DAY = Math.round(RECIPIENTS_PER_DAY * ENTRY_RATE);
 /** "설치 시 전원 배정"의 일별 배정 코호트(가상). 이 중 후기 화면까지 가는 사람은 일부뿐이라 효과가 크게 희석된다. */
 export const ALL_ASSIGNED_PER_DAY = 400_000;
+/** 설치 시 전원 배정 코호트 중 후기 화면 진입자 비율(가상): 204,600 / 6,000,000 ≈ 3.4% */
 export const ALL_ASSIGNED_ENTRY = ENTRANTS_PER_DAY / 6_000_000;
 
 export const NEW_SHARE = 0.09;
-/** 신규 사용자 중 설치 후 24시간 이내 비중(가상). 신규 설치 버그가 이 코호트를 대조군으로 몰아넣는다. */
+/** 신규 사용자 중 설치 후 24시간 이내 비중(가상). 신규 설치 버그가 트리거 모집단의 약 3%를 대조군으로 강제해서, 이 코호트는 대부분(약 90%) 대조군에 있게 된다. */
 export const NEW_FIRST_DAY_SHARE = 0.4;
 
 /** 후기 화면 진입자 기준 답례 후기 작성률(72시간 내 제출) */
@@ -47,9 +48,8 @@ export const DEVICE_MULTI_SHARE = 0.06;
 // ── 거래완료 게시글 검색 노출 (p3) ──
 export const SEARCH_USERS_PER_DAY = 400_000; // 일별 신규 검색 코호트(가상)
 export const LISTINGS_PER_DAY = 60_000; // 일 신규 게시글(가상)
+/** 동네 수. 동네를 하나씩 만들지 않고 평균 크기와 ICC 로 디자인 효과만 계산한다(listing.ts). */
 export const NEIGHBORHOODS = 6_500;
-/** 동네 크기 로그정규의 σ (평균 활성 사용자 3,000명) */
-export const NEIGHBORHOOD_SIGMA = 0.9;
 export const BASE = { create: 0.061, chat: 0.142, retry: 0.18, sell: 0.48 } as const;
 /** 동네 내 상관(ICC), 지표별 0.01~0.04 */
 export const ICC = { create: 0.02, chat: 0.01, retry: 0.01, sell: 0.04 } as const;
