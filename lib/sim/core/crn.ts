@@ -31,7 +31,13 @@ export function canonicalJSON(value: unknown): string {
   return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalJSON(obj[k])}`).join(",")}}`;
 }
 
-/** sim_runs 캐시 키 = sha256(case|phase|canonicalJSON(design)) */
+/**
+ * 엔진 버전. 시뮬레이터·판정 규칙을 고쳐 같은 설계의 결과가 달라지면 올린다 → sim_runs 의 옛 행이 새 캐시 키와 어긋나
+ * 새 결과가 새 행으로 들어간다. 캐시 키에만 쓰고 난수 시드(crnStream/crnZ)에는 쓰지 않으므로 시뮬레이션 숫자는 바뀌지 않는다.
+ */
+export const ENGINE_VERSION = 2;
+
+/** sim_runs 캐시 키 = sha256(v{ENGINE_VERSION}|case|phase|canonicalJSON(design)) */
 export function designHash(caseKey: string, phase: string, design: unknown): string {
-  return createHash("sha256").update(`${caseKey}|${phase}|${canonicalJSON(design)}`).digest("hex");
+  return createHash("sha256").update(`v${ENGINE_VERSION}|${caseKey}|${phase}|${canonicalJSON(design)}`).digest("hex");
 }

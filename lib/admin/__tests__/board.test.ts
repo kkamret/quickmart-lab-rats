@@ -64,6 +64,14 @@ describe("buildBoard", () => {
     expect(rows[0].design.duration_days).toBe(14);
   });
 
+  it("시간대 표기가 섞여도 시각이 가장 늦은 실행을 쓴다", () => {
+    const runs = [
+      run("t1", p1({ duration_days: 7 }), "2026-10-04T09:00:00+09:00"),
+      run("t1", p1({ duration_days: 14 }), "2026-10-04T01:00:00Z"),
+    ];
+    expect(buildBoard(teams, [], runs).comparisons[0].rows[0].design.duration_days).toBe(14);
+  });
+
   it("개념 보드: 걸린 플래그별로 조를 모은다", () => {
     const short = run("t1", p1({ duration_days: 7 }), "2026-01-01T00:00:00Z");
     const b = buildBoard(teams, [], [short]);

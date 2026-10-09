@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canonicalJSON, crnStream, crnZ, designHash, type NoiseKey } from "../crn";
+import { createHash } from "node:crypto";
+import { ENGINE_VERSION, canonicalJSON, crnStream, crnZ, designHash, type NoiseKey } from "../crn";
 import { binomialCount, groupMean, heavyTailGroup, poisson, sampleGroupMoments, sampleSd } from "../noise";
 import { hashSeed, mulberry32 } from "../rng";
 
@@ -68,6 +69,15 @@ describe("designHash / canonicalJSON", () => {
     expect(designHash("baemin", "p2", { a: 1 })).not.toBe(h);
     expect(designHash("baemin", "p1", { a: 1, b: undefined })).toBe(h);
     expect(h).toMatch(/^[0-9a-f]{64}$/);
+  });
+  it("엔진 버전이 캐시 키에 들어간다(옛 버전 행과 겹치지 않는다). 난수 시드는 버전과 무관하다", () => {
+    const legacy = createHash("sha256").update(`baemin|p1|${canonicalJSON({ a: 1 })}`).digest("hex");
+    expect(designHash("baemin", "p1", { a: 1 })).not.toBe(legacy);
+    const withVersion = (v: number) => createHash("sha256").update(`v${v}|baemin|p1|${canonicalJSON({ a: 1 })}`).digest("hex");
+    expect(designHash("baemin", "p1", { a: 1 })).toBe(withVersion(ENGINE_VERSION));
+    expect(withVersion(ENGINE_VERSION + 1)).not.toBe(withVersion(ENGINE_VERSION));
+    // 시드: 버전이 시드에 섞이면 시뮬레이션 숫자가 통째로 바뀐다. 값이 고정돼 있음을 못 박아 둔다.
+    expect(crnZ(20260101, { case: "baemin", phase: "p1", period: 1, segment: "s", arm: "A", metric: "m" })).toBeCloseTo(-2.2803750975050567, 12);
   });
 });
 
