@@ -7,7 +7,7 @@ type Obj = Record<string, unknown>;
 const blankP1 = (): Obj => ({
   phase: "p1",
   hypothesis: { action: "", behavior: "", impact: "" },
-  scope: { os: "all", surface: "all" },
+  scope: { os: "android", surface: "store_home" },
   metrics: { guardrails: [], secondary: [] },
   alpha: 0.05,
   power: 0.8,
