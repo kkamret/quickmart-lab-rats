@@ -41,8 +41,8 @@ describe("generateJson", () => {
   it("응답이 잘리면 max_tokens 를 늘려서 다시 요청한다", async () => {
     const llm = llmReturning({ text: "{\"score\":", truncated: true }, { text: JSON.stringify(goodTeam) });
     await generateJson(llm, teamReviewSchema, { system: "s", user: "u" });
-    expect(llm.calls[0]).toBe(2500);
-    expect(llm.calls[1]).toBeGreaterThan(2500);
+    expect(llm.calls[0]).toBe(4096);
+    expect(llm.calls[1]).toBeGreaterThan(4096);
   });
 });
 

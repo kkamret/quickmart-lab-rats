@@ -40,7 +40,8 @@ export function openAICompatLLM(cfg: LLMConfig): ReviewLLM {
         max_tokens: maxTokens,
         response_format: { type: "json_object" },
         // 추론 토큰이 max_tokens 를 잠식하지 않도록 낮게 (Upstage 확장 파라미터, 다른 공급자에는 보내지 않는다)
-        ...(cfg.upstage ? ({ reasoning_effort: "low" } as object) : {}),
+        // Gemini 2.5 는 생각 토큰이 max_tokens 를 먹어 JSON 이 잘리므로 같은 파라미터로 낮춘다.
+        ...(cfg.upstage || cfg.baseURL.includes("generativelanguage.googleapis.com") ? ({ reasoning_effort: "low" } as object) : {}),
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
       });
       const choice = res.choices[0];

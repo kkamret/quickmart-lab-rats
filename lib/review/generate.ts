@@ -1,7 +1,7 @@
 import type { ZodType } from "zod";
 import type { ReviewLLM } from "./llm";
 
-const BASE_TOKENS = 2500;
+const BASE_TOKENS = 4096;
 
 /**
  * JSON 만 받아 zod 로 검증한다. 실패하면 1회 재시도하고, 응답이 잘렸으면 max_tokens 를 늘려서 다시 요청한다.
