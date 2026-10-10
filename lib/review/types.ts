@@ -1,12 +1,14 @@
 /** LLM 리뷰 출력 형식 (docs/review-contract.md). 클라이언트에서도 import 하므로 서버 전용 코드를 두지 않는다. */
 import { z } from "zod";
 
+// 모델이 개수 제한을 조금 넘겨도 실패시키지 않고 잘라서 받는다.
+const capped = (n: number) => z.array(z.string()).transform((a) => a.slice(0, n));
 export const teamReviewSchema = z.object({
-  score: z.number().min(0).max(100),
-  strengths: z.array(z.string()).max(6),
-  issues: z.array(z.string()).max(6),
-  nudge_questions: z.array(z.string()).max(5),
-  vs_original: z.string(),
+  score: z.number().transform((n) => Math.min(100, Math.max(0, Math.round(n)))),
+  strengths: capped(6),
+  issues: capped(6),
+  nudge_questions: capped(5),
+  vs_original: z.string().default(""),
 });
 export type TeamReview = z.infer<typeof teamReviewSchema>;
 
